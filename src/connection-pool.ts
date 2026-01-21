@@ -32,7 +32,8 @@ export class ConnectionPool {
     // Check if we already have a valid connection
     const existingBrowser = this.browsers.get(wsEndpoint);
     if (existingBrowser && existingBrowser.isConnected()) {
-      if (this.debug) console.log(`[client] Reusing existing connection to ${wsEndpoint}`);
+      if (this.debug)
+        console.log(`[client] Reusing existing connection to ${wsEndpoint}`);
       return existingBrowser;
     }
 
@@ -57,7 +58,8 @@ export class ConnectionPool {
    * Connects to a browser server
    */
   private async connectToBrowser(wsEndpoint: string): Promise<void> {
-    if (this.debug) console.log(`[client] Connecting to browser server: ${wsEndpoint}`);
+    if (this.debug)
+      console.log(`[client] Connecting to browser server: ${wsEndpoint}`);
 
     // Connect to browser server
     const browser = await firefox.connect(wsEndpoint, {
@@ -71,7 +73,8 @@ export class ConnectionPool {
 
     // Set up disconnected event listener
     browser.on("disconnected", () => {
-      if (this.debug) console.log(`[client] Browser disconnected: ${wsEndpoint}`);
+      if (this.debug)
+        console.log(`[client] Browser disconnected: ${wsEndpoint}`);
       this.browsers.delete(wsEndpoint);
       this.connectionLocks.delete(wsEndpoint);
     });
@@ -88,8 +91,15 @@ export class ConnectionPool {
     let ws = this.replayWebSockets.get(replayEndpoint);
 
     // Reuse if OPEN or CONNECTING (avoid creating duplicate connections)
-    if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
-      if (this.debug) console.log(`[client] Reusing existing replay WebSocket: ${replayEndpoint} (state: ${ws.readyState})`);
+    if (
+      ws &&
+      (ws.readyState === WebSocket.OPEN ||
+        ws.readyState === WebSocket.CONNECTING)
+    ) {
+      if (this.debug)
+        console.log(
+          `[client] Reusing existing replay WebSocket: ${replayEndpoint} (state: ${ws.readyState})`,
+        );
       // Note: Message handler is already attached when WebSocket was created
       return ws;
     }
@@ -117,7 +127,8 @@ export class ConnectionPool {
 
     // Clean up on close
     ws.on("close", () => {
-      if (this.debug) console.log(`[client] Replay WebSocket closed: ${replayEndpoint}`);
+      if (this.debug)
+        console.log(`[client] Replay WebSocket closed: ${replayEndpoint}`);
       this.replayWebSockets.delete(replayEndpoint);
     });
 
@@ -145,7 +156,7 @@ export class ConnectionPool {
         ws.removeEventListener("open", onOpen);
         ws.removeEventListener("error", onError);
         reject(
-          new Error(`WebSocket connection failed: ${error.message || error}`)
+          new Error(`WebSocket connection failed: ${error.message || error}`),
         );
       };
 
