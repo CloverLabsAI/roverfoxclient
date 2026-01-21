@@ -15,6 +15,7 @@ import { ReplayManager } from "./replay-manager";
 import { StorageManager } from "./storage-manager";
 import { DataUsageTracker } from "./data-usage-tracker";
 import { formatProxyURL } from "./utils";
+import { IPGeolocationService } from "./ip-geolocation";
 
 export class RoverfoxClient {
     private supabaseClient: SupabaseClient;
@@ -23,6 +24,7 @@ export class RoverfoxClient {
     private replayManager: ReplayManager;
     private storageManager: StorageManager;
     private dataUsageTrackers: Map<string, DataUsageTracker>;
+    private geoService: IPGeolocationService;
     private debug: boolean;
 
     constructor(
@@ -39,6 +41,7 @@ export class RoverfoxClient {
         this.replayManager = new ReplayManager(debug);
         this.storageManager = new StorageManager(supabaseClient);
         this.dataUsageTrackers = new Map();
+        this.geoService = new IPGeolocationService();
 
         // Set up streaming message handler
         this.connectionPool.setStreamingMessageHandler((message) => {
@@ -69,6 +72,29 @@ export class RoverfoxClient {
 
         if (!profile) {
             throw new Error("Profile not found");
+        }
+
+        // Lookup geolocation if not already set and proxy URL exists
+        if (!profile.data.timezone && profile.data.proxyUrl) {
+            const ip = IPGeolocationService.extractIPFromProxy(profile.data.proxyUrl);
+            if (ip) {
+                const geoData = await this.geoService.lookup(ip);
+                if (geoData) {
+                    profile.data.timezone = geoData.timezone;
+                    profile.data.geolocation = { lat: geoData.lat, lon: geoData.lon };
+                    profile.data.countryCode = geoData.countryCode;
+
+                    // Persist to database for future launches
+                    await this.supabaseClient
+                        .from("redrover_profile_data")
+                        .update({ data: profile.data })
+                        .eq("browser_id", browserId);
+
+                    if (this.debug) {
+                        console.log(`Geolocation set for ${browserId}: ${geoData.timezone}`);
+                    }
+                }
+            }
         }
 
         // Fetch proxy data if needed
@@ -273,6 +299,19 @@ export class RoverfoxClient {
                 proxyUrl: proxyUrl,
             },
         };
+
+        // Lookup geolocation from proxy IP
+        if (proxyUrl) {
+            const ip = IPGeolocationService.extractIPFromProxy(proxyUrl);
+            if (ip) {
+                const geoData = await this.geoService.lookup(ip);
+                if (geoData) {
+                    profile.data.timezone = geoData.timezone;
+                    profile.data.geolocation = { lat: geoData.lat, lon: geoData.lon };
+                    profile.data.countryCode = geoData.countryCode;
+                }
+            }
+        }
 
         await this.supabaseClient.from("accounts").insert({
             browserId: browserId,
