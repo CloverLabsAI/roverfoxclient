@@ -82,6 +82,7 @@ export interface ProfileStorageData {
     lon: number;
   };
   countryCode?: string;
+  lastKnownIP?: string; 
 }
 
 export type RoverFoxProfileData = {

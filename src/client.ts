@@ -15,7 +15,7 @@ import { ReplayManager } from "./replay-manager";
 import { StorageManager } from "./storage-manager";
 import { DataUsageTracker } from "./data-usage-tracker";
 import { formatProxyURL } from "./utils";
-import { IPGeolocationService } from "./ip-geolocation";
+import { IPGeolocationService, ProxyConfig } from "./ip-geolocation";
 
 export class RoverfoxClient {
     private supabaseClient: SupabaseClient;
@@ -74,36 +74,15 @@ export class RoverfoxClient {
             throw new Error("Profile not found");
         }
 
-        // Lookup geolocation if not already set and proxy URL exists
-        if (!profile.data.timezone && profile.data.proxyUrl) {
-            const ip = IPGeolocationService.extractIPFromProxy(profile.data.proxyUrl);
-            if (ip) {
-                const geoData = await this.geoService.lookup(ip);
-                if (geoData) {
-                    profile.data.timezone = geoData.timezone;
-                    profile.data.geolocation = { lat: geoData.lat, lon: geoData.lon };
-                    profile.data.countryCode = geoData.countryCode;
-
-                    // Persist to database for future launches
-                    await this.supabaseClient
-                        .from("redrover_profile_data")
-                        .update({ data: profile.data })
-                        .eq("browser_id", browserId);
-
-                    if (this.debug) {
-                        console.log(`Geolocation set for ${browserId}: ${geoData.timezone}`);
-                    }
-                }
-            }
-        }
-
-        // Fetch proxy data if needed
+        // Fetch proxy data from database
         const { data: proxyId } = await this.supabaseClient
             .from("accounts")
             .select("proxyId")
             .eq("browserId", browserId);
 
         let proxyObject: RoverfoxProxyObject = null;
+        let proxyConfig: ProxyConfig | null = null;
+
         if (proxyId) {
             const { data: proxyData } = await this.supabaseClient
                 .from("proxies")
@@ -117,6 +96,40 @@ export class RoverfoxClient {
                     server: `${entry}:${port}`,
                     username,
                     password,
+                };
+                proxyConfig = { host: entry, port, username, password };
+            }
+        }
+
+        // Get current exit IP and check if geolocation needs updating
+        // This handles both hostname proxies (gw.dataimpulse.com) and IP rotation
+        if (proxyConfig) {
+            const { changed, currentIP } = await this.geoService.hasIPChanged(
+                proxyConfig,
+                profile.data.lastKnownIP || null
+            );
+
+            if (currentIP && (changed || !profile.data.timezone)) {
+                const geoData = await this.geoService.lookup(currentIP);
+                if (geoData) {
+                    profile.data.timezone = geoData.timezone;
+                    profile.data.geolocation = { lat: geoData.lat, lon: geoData.lon };
+                    profile.data.countryCode = geoData.countryCode;
+                    profile.data.lastKnownIP = currentIP;
+
+                    // Persist to database
+                    await this.supabaseClient
+                        .from("redrover_profile_data")
+                        .update({ data: profile.data })
+                        .eq("browser_id", browserId);
+
+                    if (this.debug) {
+                        if (changed) {
+                            console.log(`IP changed for ${browserId}: ${profile.data.lastKnownIP} -> ${currentIP}, updated geolocation to ${geoData.timezone}`);
+                        } else {
+                            console.log(`Geolocation set for ${browserId}: ${geoData.timezone}`);
+                        }
+                    }
                 }
             }
         }
@@ -287,8 +300,8 @@ export class RoverfoxClient {
      * Creates a new profile
      */
     async createProfile(proxyUrl: string, proxyId: number): Promise<RoverFoxProfileData> {
-        let browserId = uuidv4();
-        let profile: RoverFoxProfileData = {
+        const browserId = uuidv4();
+        const profile: RoverFoxProfileData = {
             browser_id: browserId,
             data: {
                 fontSpacingSeed: Math.floor(Math.random() * 100000000),
@@ -300,15 +313,31 @@ export class RoverfoxClient {
             },
         };
 
-        // Lookup geolocation from proxy IP
-        if (proxyUrl) {
-            const ip = IPGeolocationService.extractIPFromProxy(proxyUrl);
-            if (ip) {
-                const geoData = await this.geoService.lookup(ip);
-                if (geoData) {
-                    profile.data.timezone = geoData.timezone;
-                    profile.data.geolocation = { lat: geoData.lat, lon: geoData.lon };
-                    profile.data.countryCode = geoData.countryCode;
+        // Get proxy credentials to lookup geolocation via actual exit IP
+        const { data: proxyData } = await this.supabaseClient
+            .from("proxies")
+            .select("entry, port, username, password")
+            .eq("id", proxyId)
+            .single();
+
+        if (proxyData) {
+            const proxyConfig: ProxyConfig = {
+                host: proxyData.entry,
+                port: proxyData.port,
+                username: proxyData.username,
+                password: proxyData.password,
+            };
+
+            // Get real exit IP through the proxy
+            const result = await this.geoService.lookupThroughProxy(proxyConfig);
+            if (result) {
+                profile.data.timezone = result.geo.timezone;
+                profile.data.geolocation = { lat: result.geo.lat, lon: result.geo.lon };
+                profile.data.countryCode = result.geo.countryCode;
+                profile.data.lastKnownIP = result.ip;
+
+                if (this.debug) {
+                    console.log(`Profile ${browserId} created with IP ${result.ip}, timezone ${result.geo.timezone}`);
                 }
             }
         }

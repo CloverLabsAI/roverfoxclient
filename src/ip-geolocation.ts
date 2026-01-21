@@ -1,6 +1,8 @@
 // IP Geolocation Service
 // Looks up geographic info for proxy IPs using ip-api.com
 
+import { HttpsProxyAgent } from "https-proxy-agent";
+
 export interface GeoLocationData {
   countryCode: string;
   timezone: string;
@@ -10,13 +12,27 @@ export interface GeoLocationData {
   region?: string;
 }
 
+export interface ProxyConfig {
+  host: string;
+  port: number;
+  username?: string;
+  password?: string;
+}
+
 interface CacheEntry {
   data: GeoLocationData;
   timestamp: number;
 }
 
+interface IPCacheEntry {
+  ip: string;
+  timestamp: number;
+}
+
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const IP_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 const MIN_REQUEST_INTERVAL_MS = 1500; // ~40 req/min to stay under 45/min limit
+const IPIFY_TIMEOUT_MS = 7000;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -24,7 +40,82 @@ function sleep(ms: number): Promise<void> {
 
 export class IPGeolocationService {
   private cache: Map<string, CacheEntry> = new Map();
+  private ipCache: Map<string, IPCacheEntry> = new Map();
   private lastRequestTime: number = 0;
+
+  // Get the actual exit IP by making a request through the proxy to ipify.org
+  async getExitIP(proxy: ProxyConfig): Promise<string | null> {
+    const cacheKey = `${proxy.host}:${proxy.port}`;
+
+    // Check IP cache (shorter TTL since IPs can rotate)
+    const cached = this.ipCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < IP_CACHE_TTL_MS) {
+      return cached.ip;
+    }
+
+    try {
+      // Build proxy URL for the agent
+      const auth = proxy.username && proxy.password
+        ? `${proxy.username}:${proxy.password}@`
+        : "";
+      const proxyUrl = `http://${auth}${proxy.host}:${proxy.port}`;
+      const agent = new HttpsProxyAgent(proxyUrl);
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), IPIFY_TIMEOUT_MS);
+
+      const response = await fetch("https://api.ipify.org?format=json", {
+        // @ts-ignore - Node.js fetch supports agent
+        agent,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        console.warn(`ipify request failed: ${response.status}`);
+        return null;
+      }
+
+      const data = await response.json();
+      const ip = data.ip;
+
+      if (ip) {
+        this.ipCache.set(cacheKey, { ip, timestamp: Date.now() });
+      }
+
+      return ip || null;
+    } catch (error) {
+      console.error(`Failed to get exit IP through proxy:`, error);
+      return null;
+    }
+  }
+
+  // Check if proxy IP has changed compared to stored IP
+  async hasIPChanged(proxy: ProxyConfig, storedIP: string | null): Promise<{ changed: boolean; currentIP: string | null }> {
+    const currentIP = await this.getExitIP(proxy);
+
+    if (!currentIP) {
+      return { changed: false, currentIP: null };
+    }
+
+    if (!storedIP) {
+      return { changed: true, currentIP };
+    }
+
+    return { changed: currentIP !== storedIP, currentIP };
+  }
+
+  // Get geolocation by first getting the exit IP through the proxy
+  async lookupThroughProxy(proxy: ProxyConfig): Promise<{ ip: string; geo: GeoLocationData } | null> {
+    const ip = await this.getExitIP(proxy);
+    if (!ip) return null;
+
+    const geo = await this.lookup(ip);
+    if (!geo) return null;
+
+    return { ip, geo };
+  }
 
   // Lookup geolocation for an IP address
   async lookup(ip: string): Promise<GeoLocationData | null> {
@@ -102,14 +193,30 @@ export class IPGeolocationService {
     }
   }
 
-  // Clear the cache (useful for testing)
+  // Clear the geolocation cache
   clearCache(): void {
     this.cache.clear();
+  }
+
+  // Clear the IP cache (forces fresh IP lookup on next call)
+  clearIPCache(): void {
+    this.ipCache.clear();
+  }
+
+  // Clear all caches
+  clearAllCaches(): void {
+    this.cache.clear();
+    this.ipCache.clear();
   }
 
   // Get cache size (useful for debugging)
   getCacheSize(): number {
     return this.cache.size;
+  }
+
+  // Get IP cache size
+  getIPCacheSize(): number {
+    return this.ipCache.size;
   }
 }
 
