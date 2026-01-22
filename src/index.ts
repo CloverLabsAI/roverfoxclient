@@ -6,12 +6,12 @@ export { RoverfoxClient, RoverfoxClient as default } from "./client";
 
 // Re-export types for consumers
 export type {
-    RoverFoxProfileData,
-    RoverfoxProxyObject,
-    ServerAssignment,
-    StorageState,
-    Cookie,
-    ProfileStorageData,
+  RoverFoxProfileData,
+  RoverfoxProxyObject,
+  ServerAssignment,
+  StorageState,
+  Cookie,
+  ProfileStorageData,
 } from "./types";
 
 // Re-export utilities

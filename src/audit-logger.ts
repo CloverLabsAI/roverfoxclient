@@ -9,7 +9,7 @@ export async function logActionAudit(
   supabaseClient: SupabaseClient,
   accountId: string,
   actionType: LoggedActivityType,
-  metadata: Record<string, unknown>
+  metadata: Record<string, unknown>,
 ) {
   try {
     const { error } = await supabaseClient.from("accountAuditLogs").insert({
@@ -21,13 +21,13 @@ export async function logActionAudit(
     if (error) {
       console.error(
         `Failed to log action audit for account ${accountId}:`,
-        error
+        error,
       );
     }
   } catch (error) {
     console.error(
       `Error logging action audit for account ${accountId}:`,
-      error
+      error,
     );
   }
 }
