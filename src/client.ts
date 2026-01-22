@@ -260,7 +260,7 @@ export class RoverfoxClient {
     /**
      * Creates a new profile
      */
-    async createProfile(proxyUrl: string, proxyId: number): Promise<RoverFoxProfileData> {
+    async createProfile(proxyUrl: string, proxyState: string | null): Promise<RoverFoxProfileData> {
         let browserId = uuidv4();
         let profile: RoverFoxProfileData = {
             browser_id: browserId,
@@ -277,7 +277,7 @@ export class RoverfoxClient {
         await this.supabaseClient.from("accounts").insert({
             browserId: browserId,
             platform: "roverfox",
-            proxyId: proxyId,
+            proxyState: proxyState,
         });
 
         await this.supabaseClient.from("redrover_profile_data").insert(profile);
