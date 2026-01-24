@@ -20,7 +20,8 @@ export class StorageManager {
    */
   async saveStorage(page: Page, profile: RoverFoxProfileData): Promise<void> {
     try {
-      let { localStorage, indexedDB, origin }: any = await this.exportStorage(page);
+      let { localStorage, indexedDB, origin }: any =
+        await this.exportStorage(page);
       let cookies = await page.context().cookies();
 
       const { error } = await this.supabaseClient.rpc(
@@ -31,7 +32,7 @@ export class StorageManager {
           p_local_storage: localStorage,
           p_indexed_db: indexedDB,
           p_cookies: cookies,
-        }
+        },
       );
 
       if (error) {
@@ -58,7 +59,7 @@ export class StorageManager {
    */
   async setFingerprintingProperties(
     page: Page,
-    profile: RoverFoxProfileData
+    profile: RoverFoxProfileData,
   ): Promise<void> {
     let ipv4 = "";
 
@@ -66,23 +67,41 @@ export class StorageManager {
       ({
         fontSpacingSeed,
         ipv4,
+        geolocation,
+        timezone,
       }: {
         fontSpacingSeed: number;
         ipv4: string | undefined;
+        geolocation: { lat: number; lon: number } | undefined;
+        timezone: string | undefined;
       }) => {
         try {
           let _window = window as typeof window & {
             setFontSpacingSeed: (seed: number) => void;
             setWebRTCIPv4: (ipv4: string) => void;
+            setGeolocation?: (lat: number, lon: number) => void;
+            setTimezone?: (timezone: string) => void;
           };
           _window.setFontSpacingSeed(fontSpacingSeed);
           _window.setWebRTCIPv4("");
+
+          // Set geolocation if available
+          if (geolocation && _window.setGeolocation) {
+            _window.setGeolocation(geolocation.lat, geolocation.lon);
+          }
+
+          // Set timezone if available
+          if (timezone && _window.setTimezone) {
+            _window.setTimezone(timezone);
+          }
         } catch (e) {}
       },
       {
         fontSpacingSeed: profile.data.fontSpacingSeed,
         ipv4,
-      }
+        geolocation: profile.data.geolocation,
+        timezone: profile.data.timezone,
+      },
     );
   }
 
@@ -98,7 +117,7 @@ export class StorageManager {
       `(async () => {
         ${this.scripts()}
         return { localStorage: await exportLocalStorage(), indexedDB: await exportIndexedDB() }
-      })()`
+      })()`,
     );
 
     let url = new URL(page.url());
@@ -121,7 +140,7 @@ export class StorageManager {
     const scriptsDir = candidates.find((p) => fs.existsSync(p));
     if (!scriptsDir) {
       throw new Error(
-        "Unable to locate scripts directory. Ensure src/scripts is copied to dist/scripts or available at runtime."
+        "Unable to locate scripts directory. Ensure src/scripts is copied to dist/scripts or available at runtime.",
       );
     }
     const files = fs.readdirSync(scriptsDir).filter((f) => f.endsWith(".js"));
