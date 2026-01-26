@@ -2,14 +2,17 @@
  * Client for communicating with Roverfox Manager
  */
 
-import type { ServerAssignment } from './types';
+import type { ServerAssignment } from "./types";
 
 export class ManagerClient {
   private managerUrl: string;
   private debug: boolean;
 
   constructor(managerUrl?: string, debug: boolean = false) {
-    this.managerUrl = managerUrl || process.env.ROVERFOX_MANAGER_URL || 'https://manager.roverfox.monitico.com';
+    this.managerUrl =
+      managerUrl ||
+      process.env.ROVERFOX_MANAGER_URL ||
+      "https://manager.roverfox.monitico.com";
     this.debug = debug;
   }
 
@@ -24,10 +27,12 @@ export class ManagerClient {
       }
 
       const assignment = await response.json();
-      if (this.debug) console.log(`[client] Assigned to server ${assignment.serverIp}`);
+      if (this.debug)
+        console.log(`[client] Assigned to server ${assignment.serverIp}`);
       return assignment;
     } catch (error) {
-      if (this.debug) console.error('[client] Failed to get server assignment:', error);
+      if (this.debug)
+        console.error("[client] Failed to get server assignment:", error);
       throw error;
     }
   }

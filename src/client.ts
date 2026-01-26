@@ -341,6 +341,7 @@ export class RoverfoxClient {
   async createProfile(
     proxyUrl: string,
     proxyId: number,
+    proxyState: string | null = null,
   ): Promise<RoverFoxProfileData> {
     const browserId = uuidv4();
     const profile: RoverFoxProfileData = {
@@ -390,6 +391,7 @@ export class RoverfoxClient {
       browserId: browserId,
       platform: "roverfox",
       proxyId: proxyId,
+      proxyState: proxyState,
     });
 
     await this.supabaseClient.from("redrover_profile_data").insert(profile);

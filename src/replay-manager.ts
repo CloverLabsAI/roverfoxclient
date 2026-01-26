@@ -5,11 +5,18 @@
 import { Page } from "playwright";
 import WebSocket from "ws";
 import type { ConnectionPool } from "./connection-pool";
+import type {
+  MouseMoveCommand,
+  MouseClickCommand,
+  KeyboardTypeCommand,
+  KeyboardPressCommand,
+  ScrollCommand,
+} from "./types/replay-protocol";
 
 async function sendPageClosedNotification(
   ws: WebSocket,
   browserId: string,
-  pageId: string
+  pageId: string,
 ) {
   try {
     if (ws.readyState === WebSocket.OPEN) {
@@ -18,7 +25,7 @@ async function sendPageClosedNotification(
           type: "page-closed",
           uuid: browserId,
           pageId,
-        })
+        }),
       );
     }
   } catch (error) {
@@ -56,7 +63,7 @@ export class ReplayManager {
     page_id: string,
     browser_id: string,
     replayWs: WebSocket,
-    connectionPool: ConnectionPool
+    connectionPool: ConnectionPool,
   ): Promise<void> {
     // Track this page for the browser
     if (!this.browserPages.has(browser_id)) {
@@ -79,7 +86,7 @@ export class ReplayManager {
       pageId: page_id,
       browserId: browser_id,
       replayWs,
-      connectionPool
+      connectionPool,
     });
 
     // monkey patch page.mouse.move to send mouse position to ws
@@ -102,7 +109,13 @@ export class ReplayManager {
 
     // Start streaming only if already enabled (viewer is watching)
     if (this.streamingEnabled.get(browser_id)) {
-      this.startScreenshotStreaming(page, page_id, browser_id, replayWs, connectionPool);
+      this.startScreenshotStreaming(
+        page,
+        page_id,
+        browser_id,
+        replayWs,
+        connectionPool,
+      );
     }
 
     page.on("close", () => {
@@ -144,7 +157,7 @@ export class ReplayManager {
                 context.pageId,
                 context.browserId,
                 context.replayWs,
-                context.connectionPool
+                context.connectionPool,
               );
             }
           }
@@ -163,7 +176,116 @@ export class ReplayManager {
           this.stopScreenshotStreaming(pageId);
         }
       }
+    } else if (this.isInputCommand(message)) {
+      // Handle input commands from viewers
+      this.handleInputCommand(message);
     }
+  }
+
+  /**
+   * Checks if a message is an input command
+   */
+  private isInputCommand(message: any): boolean {
+    return [
+      "mouse-move",
+      "mouse-click",
+      "keyboard-type",
+      "keyboard-press",
+      "scroll",
+    ].includes(message.type);
+  }
+
+  /**
+   * Handles input commands from viewers
+   */
+  async handleInputCommand(message: any): Promise<void> {
+    const { type, uuid, pageId } = message;
+
+    // Find the page by browserId and pageId
+    const pages = this.browserPages.get(uuid);
+    if (!pages) {
+      console.warn(`[replay-manager] No pages found for browser ${uuid}`);
+      return;
+    }
+
+    const page = pages.get(pageId);
+    if (!page || page.isClosed()) {
+      console.warn(`[replay-manager] Page ${pageId} not found or closed`);
+      return;
+    }
+
+    try {
+      switch (type) {
+        case "mouse-move":
+          await this.executeMouseMove(page, message as MouseMoveCommand);
+          break;
+        case "mouse-click":
+          await this.executeMouseClick(page, message as MouseClickCommand);
+          break;
+        case "keyboard-type":
+          await this.executeKeyboardType(page, message as KeyboardTypeCommand);
+          break;
+        case "keyboard-press":
+          await this.executeKeyboardPress(
+            page,
+            message as KeyboardPressCommand,
+          );
+          break;
+        case "scroll":
+          await this.executeScroll(page, message as ScrollCommand);
+          break;
+      }
+    } catch (error) {
+      // Silently ignore input command errors (page may be navigating)
+    }
+  }
+
+  private async executeMouseMove(
+    page: Page,
+    cmd: MouseMoveCommand,
+  ): Promise<void> {
+    await page.mouse.move(cmd.x, cmd.y);
+    this.mousePositions.set(cmd.pageId, { x: cmd.x, y: cmd.y });
+  }
+
+  private async executeMouseClick(
+    page: Page,
+    cmd: MouseClickCommand,
+  ): Promise<void> {
+    await page.mouse.click(cmd.x, cmd.y, {
+      button: cmd.button,
+      clickCount: cmd.clickCount,
+    });
+    this.mousePositions.set(cmd.pageId, { x: cmd.x, y: cmd.y });
+  }
+
+  private async executeKeyboardType(
+    page: Page,
+    cmd: KeyboardTypeCommand,
+  ): Promise<void> {
+    await page.keyboard.type(cmd.text);
+  }
+
+  private async executeKeyboardPress(
+    page: Page,
+    cmd: KeyboardPressCommand,
+  ): Promise<void> {
+    // Build key combination string for modifiers
+    const modifiers: string[] = [];
+    if (cmd.modifiers?.ctrl) modifiers.push("Control");
+    if (cmd.modifiers?.shift) modifiers.push("Shift");
+    if (cmd.modifiers?.alt) modifiers.push("Alt");
+    if (cmd.modifiers?.meta) modifiers.push("Meta");
+
+    if (modifiers.length > 0) {
+      await page.keyboard.press(`${modifiers.join("+")}+${cmd.key}`);
+    } else {
+      await page.keyboard.press(cmd.key);
+    }
+  }
+
+  private async executeScroll(page: Page, cmd: ScrollCommand): Promise<void> {
+    await page.mouse.wheel(cmd.deltaX, cmd.deltaY);
   }
 
   /**
@@ -174,7 +296,7 @@ export class ReplayManager {
     pageId: string,
     browserId: string,
     replayWs: WebSocket,
-    connectionPool: ConnectionPool
+    connectionPool: ConnectionPool,
   ): void {
     // Don't start if already streaming
     if (this.screenshotIntervals.has(pageId)) {
@@ -183,7 +305,13 @@ export class ReplayManager {
 
     const FPS = 10;
     const interval = setInterval(() => {
-      this.sendPageStateLiveReplay(page, browserId, pageId, replayWs, connectionPool);
+      this.sendPageStateLiveReplay(
+        page,
+        browserId,
+        pageId,
+        replayWs,
+        connectionPool,
+      );
     }, 1000 / FPS);
 
     this.screenshotIntervals.set(pageId, interval);
@@ -197,7 +325,7 @@ export class ReplayManager {
     browserId: string,
     pageId: string,
     replayWs: WebSocket,
-    connectionPool: ConnectionPool
+    connectionPool: ConnectionPool,
   ): Promise<void> {
     try {
       // Check if streaming is enabled for this browser
