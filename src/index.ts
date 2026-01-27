@@ -16,3 +16,7 @@ export type {
 
 // Re-export utilities
 export { formatProxyURL, createProxyUrl } from "./utils";
+
+// Re-export geolocation service
+export { IPGeolocationService, getGeoService } from "./ip-geolocation";
+export type { GeoLocationData, ProxyConfig } from "./ip-geolocation";
