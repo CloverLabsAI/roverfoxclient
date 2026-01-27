@@ -1,7 +1,12 @@
 // IP Geolocation Service
 // Looks up geographic info for proxy IPs using ip-api.com
-
 import { HttpsProxyAgent } from "https-proxy-agent";
+
+const IP_API_KEY = process.env.IP_API_KEY;
+const USE_PRO_API = !!IP_API_KEY;
+const IP_API_BASE = USE_PRO_API
+  ? "https://pro.ip-api.com"
+  : "http://ip-api.com"; // Free API for backup
 
 export interface GeoLocationData {
   countryCode: string;
@@ -31,8 +36,8 @@ interface IPCacheEntry {
 
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const IP_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
-const MIN_REQUEST_INTERVAL_MS = 1500; // ~40 req/min to stay under 45/min limit
 const IPIFY_TIMEOUT_MS = 7000;
+const FREE_API_RATE_LIMIT_MS = 1500; // ~40 req/min to stay under free tier 45/min limit
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -41,7 +46,7 @@ function sleep(ms: number): Promise<void> {
 export class IPGeolocationService {
   private cache: Map<string, CacheEntry> = new Map();
   private ipCache: Map<string, IPCacheEntry> = new Map();
-  private lastRequestTime: number = 0;
+  private lastRequestTime: number = 0; // For free API rate limiting
 
   // Get the actual exit IP by making a request through the proxy to ipify.org
   async getExitIP(proxy: ProxyConfig): Promise<string | null> {
@@ -133,14 +138,24 @@ export class IPGeolocationService {
     return data;
   }
 
-  // Fetch from ip-api.com with rate limiting
+  // Fetch from ip-api.com (Uses Free API if the key isn't set)
   private async fetchFromAPI(ip: string): Promise<GeoLocationData | null> {
-    await this.waitForRateLimit();
+    // Rate limit only for free API
+    if (!USE_PRO_API) {
+      const elapsed = Date.now() - this.lastRequestTime;
+      if (elapsed < FREE_API_RATE_LIMIT_MS) {
+        await sleep(FREE_API_RATE_LIMIT_MS - elapsed);
+      }
+      this.lastRequestTime = Date.now();
+    }
 
     try {
-      const response = await fetch(
-        `http://ip-api.com/json/${ip}?fields=status,message,countryCode,timezone,lat,lon,city,region`
-      );
+      // Build URL based on API tier
+      const url = USE_PRO_API
+        ? `${IP_API_BASE}/json/${ip}?key=${IP_API_KEY}&fields=status,message,countryCode,timezone,lat,lon,city,region`
+        : `${IP_API_BASE}/json/${ip}?fields=status,message,countryCode,timezone,lat,lon,city,region`;
+
+      const response = await fetch(url);
       const data = await response.json();
 
       if (data.status !== "success") {
@@ -160,15 +175,6 @@ export class IPGeolocationService {
       console.error(`Geo lookup error for ${ip}:`, error);
       return null;
     }
-  }
-
-  // Rate limiter to stay under 45 req/min
-  private async waitForRateLimit(): Promise<void> {
-    const elapsed = Date.now() - this.lastRequestTime;
-    if (elapsed < MIN_REQUEST_INTERVAL_MS) {
-      await sleep(MIN_REQUEST_INTERVAL_MS - elapsed);
-    }
-    this.lastRequestTime = Date.now();
   }
 
   // Extract IP address from a proxy URL
