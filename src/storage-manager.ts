@@ -2,49 +2,43 @@
  * Storage management for browser profiles
  */
 
-import { Page } from "playwright";
-import { SupabaseClient } from "@supabase/supabase-js";
-import { RoverFoxProfileData } from "./types";
-import * as path from "path";
 import * as fs from "fs";
+import * as path from "path";
+import { Page } from "playwright";
+
+import { ManagerClient } from "./manager-client.js";
+import type { RoverFoxProfileData } from "./types/client.js";
 
 const SAVE_STORAGE_EVERY_MS = 5000;
 
 export class StorageManager {
   private scriptsCache: string | null = null;
 
-  constructor(private supabaseClient: SupabaseClient) {}
+  constructor(private managerClient: ManagerClient) {}
 
   /**
-   * Saves storage state to Supabase
+   * Saves storage state to Manager
    */
   async saveStorage(page: Page, profile: RoverFoxProfileData): Promise<void> {
     try {
-      let { localStorage, indexedDB, origin }: any = await this.exportStorage(page);
-      let cookies = await page.context().cookies();
+      const { localStorage, indexedDB, origin }: any =
+        await this.exportStorage(page);
+      const cookies = await page.context().cookies();
 
-      const { error } = await this.supabaseClient.rpc(
-        "update_profile_storage_state",
-        {
-          p_browser_id: profile.browser_id,
-          p_origin: origin,
-          p_local_storage: localStorage,
-          p_indexed_db: indexedDB,
-          p_cookies: cookies,
-        }
-      );
-
-      if (error) {
-        // Silently ignore storage update errors
-      }
-    } catch (e) {}
+      await this.managerClient.updateStorage(profile.browser_id, {
+        origin,
+        localStorage,
+        indexedDB,
+        cookies,
+      });
+    } catch (_e) {}
   }
 
   /**
    * Initializes periodic storage saver
    */
   initStorageSaver(page: Page, profile: RoverFoxProfileData): void {
-    let storageSaverInterval = setInterval(() => {
+    const storageSaverInterval = setInterval(() => {
       this.saveStorage(page, profile);
     }, SAVE_STORAGE_EVERY_MS);
 
@@ -58,31 +52,22 @@ export class StorageManager {
    */
   async setFingerprintingProperties(
     page: Page,
-    profile: RoverFoxProfileData
+    profile: RoverFoxProfileData,
   ): Promise<void> {
-    let ipv4 = "";
-
     await page.mainFrame().evaluate(
-      ({
-        fontSpacingSeed,
-        ipv4,
-      }: {
-        fontSpacingSeed: number;
-        ipv4: string | undefined;
-      }) => {
+      ({ fontSpacingSeed }: { fontSpacingSeed: number }) => {
         try {
-          let _window = window as typeof window & {
+          const _window = window as typeof window & {
             setFontSpacingSeed: (seed: number) => void;
             setWebRTCIPv4: (ipv4: string) => void;
           };
           _window.setFontSpacingSeed(fontSpacingSeed);
           _window.setWebRTCIPv4("");
-        } catch (e) {}
+        } catch (_e) {}
       },
       {
         fontSpacingSeed: profile.data.fontSpacingSeed,
-        ipv4,
-      }
+      },
     );
   }
 
@@ -94,15 +79,15 @@ export class StorageManager {
       return;
     }
 
-    let { localStorage, indexedDB }: any = await page.evaluate(
+    const { localStorage, indexedDB }: any = await page.evaluate(
       `(async () => {
         ${this.scripts()}
         return { localStorage: await exportLocalStorage(), indexedDB: await exportIndexedDB() }
-      })()`
+      })()`,
     );
 
-    let url = new URL(page.url());
-    let origin = url.origin;
+    const url = new URL(page.url());
+    const origin = url.origin;
     return { localStorage, indexedDB, origin };
   }
 
@@ -116,12 +101,11 @@ export class StorageManager {
     const candidates = [
       path.join(__dirname, "../scripts"),
       path.join(__dirname, "../../scripts"),
-      path.join(__dirname, "./scripts"),
     ];
     const scriptsDir = candidates.find((p) => fs.existsSync(p));
     if (!scriptsDir) {
       throw new Error(
-        "Unable to locate scripts directory. Ensure src/scripts is copied to dist/scripts or available at runtime."
+        "Unable to locate scripts directory. Ensure src/scripts is copied to dist/scripts or available at runtime.",
       );
     }
     const files = fs.readdirSync(scriptsDir).filter((f) => f.endsWith(".js"));

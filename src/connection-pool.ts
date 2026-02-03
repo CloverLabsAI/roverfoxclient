@@ -169,11 +169,7 @@ export class ConnectionPool {
    * Safely sends a message through WebSocket after ensuring it's open
    */
   async safeSend(ws: WebSocket, message: any): Promise<void> {
-    try {
-      await this.ensureWsOpen(ws);
-      ws.send(JSON.stringify(message));
-    } catch (error) {
-      throw error;
-    }
+    await this.ensureWsOpen(ws);
+    ws.send(JSON.stringify(message));
   }
 }

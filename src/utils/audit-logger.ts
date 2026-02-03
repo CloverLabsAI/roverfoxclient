@@ -1,9 +1,6 @@
-/**
- * Audit logging for browser actions
- */
-
 import { SupabaseClient } from "@supabase/supabase-js";
-import { LoggedActivityType } from "./types";
+
+import { LoggedActivityType } from "../types/client";
 
 export async function logActionAudit(
   supabaseClient: SupabaseClient,
@@ -12,9 +9,9 @@ export async function logActionAudit(
   metadata: Record<string, unknown>,
 ) {
   try {
-    const { error } = await supabaseClient.from("accountAuditLogs").insert({
-      browserId: accountId,
-      actionType: actionType,
+    const { error } = await supabaseClient.from("roverfox_audit_logs").insert({
+      browser_id: accountId,
+      action_type: actionType,
       metadata: metadata,
     });
 

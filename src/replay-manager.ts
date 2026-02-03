@@ -4,14 +4,15 @@
 
 import { Page } from "playwright";
 import WebSocket from "ws";
-import type { ConnectionPool } from "./connection-pool";
+
+import type { ConnectionPool } from "./connection-pool.js";
 import type {
-  MouseMoveCommand,
-  MouseClickCommand,
-  KeyboardTypeCommand,
   KeyboardPressCommand,
+  KeyboardTypeCommand,
+  MouseClickCommand,
+  MouseMoveCommand,
   ScrollCommand,
-} from "./types/replay-protocol";
+} from "./types/replay-protocol.js";
 
 async function sendPageClosedNotification(
   ws: WebSocket,
@@ -28,7 +29,7 @@ async function sendPageClosedNotification(
         }),
       );
     }
-  } catch (error) {
+  } catch (_error) {
     // Silently ignore errors
   }
 }
@@ -49,11 +50,6 @@ export class ReplayManager {
   private pageContexts: Map<string, PageStreamingContext> = new Map(); // pageId -> streaming context
   private static wsInstances: Map<string, WebSocket> = new Map();
   private static wsClosePromises: Map<string, Promise<void>> = new Map();
-  private debug: boolean;
-
-  constructor(debug: boolean = false) {
-    this.debug = debug;
-  }
 
   /**
    * Enables live replay for a page
@@ -72,7 +68,7 @@ export class ReplayManager {
 
     // Check if this Page object is already tracked (prevent duplicates)
     const existingPages = this.browserPages.get(browser_id)!;
-    for (const [existingPageId, existingPage] of existingPages.entries()) {
+    for (const [_existingPageId, existingPage] of existingPages.entries()) {
       if (existingPage === page) {
         return; // Page already tracked, don't add it again
       }
@@ -105,7 +101,7 @@ export class ReplayManager {
         pageId: page_id,
         pageTitle,
       });
-    } catch (e) {}
+    } catch (_e) {}
 
     // Start streaming only if already enabled (viewer is watching)
     if (this.streamingEnabled.get(browser_id)) {
@@ -235,7 +231,7 @@ export class ReplayManager {
           await this.executeScroll(page, message as ScrollCommand);
           break;
       }
-    } catch (error) {
+    } catch (_error) {
       // Silently ignore input command errors (page may be navigating)
     }
   }
@@ -343,7 +339,7 @@ export class ReplayManager {
         return;
       }
 
-      let screenshot = await page.screenshot({
+      const screenshot = await page.screenshot({
         type: "jpeg",
         quality: 70,
         timeout: 1000, // 1 second timeout for screenshot
@@ -361,10 +357,10 @@ export class ReplayManager {
           mouseX: this.mousePositions.get(pageId)?.x,
           mouseY: this.mousePositions.get(pageId)?.y,
         });
-      } catch (error) {
+      } catch (_error) {
         // Continue execution as screenshot streaming is not critical
       }
-    } catch (e) {
+    } catch (_e) {
       // Silently ignore screenshot errors (page may be closing)
     }
   }
@@ -383,7 +379,7 @@ export class ReplayManager {
   /**
    * Stops all screenshot streaming for a browser
    */
-  private stopAllScreenshotStreaming(browserId: string): void {
+  private stopAllScreenshotStreaming(): void {
     // Stop all intervals for this browser's pages
     for (const [pageId, interval] of this.screenshotIntervals.entries()) {
       clearInterval(interval);
@@ -406,7 +402,7 @@ export class ReplayManager {
     }
 
     this.browserPages.delete(browserId);
-    this.stopAllScreenshotStreaming(browserId);
+    this.stopAllScreenshotStreaming();
   }
 
   /**
@@ -444,7 +440,7 @@ export class ReplayManager {
     }
 
     // Create close promise and initiate close
-    closePromise = new Promise((resolve, reject) => {
+    closePromise = new Promise((resolve) => {
       const timeout = setTimeout(() => {
         ReplayManager.wsInstances.delete(browserId);
         ReplayManager.wsClosePromises.delete(browserId);
@@ -458,7 +454,7 @@ export class ReplayManager {
         resolve();
       });
 
-      ws.addEventListener("error", (error) => {
+      ws.addEventListener("error", () => {
         clearTimeout(timeout);
         ReplayManager.wsInstances.delete(browserId);
         ReplayManager.wsClosePromises.delete(browserId);
@@ -470,7 +466,7 @@ export class ReplayManager {
 
     try {
       ws.close();
-    } catch (error) {
+    } catch (_error) {
       // Clean up even if close() throws
       ReplayManager.wsInstances.delete(browserId);
       ReplayManager.wsClosePromises.delete(browserId);

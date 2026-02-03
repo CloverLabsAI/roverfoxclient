@@ -2,7 +2,7 @@
  * Utility functions for Roverfox Client
  */
 
-import type { RoverfoxProxyObject } from "./types";
+import type { RoverfoxProxyObject } from "../types.js";
 
 /**
  * Formats a proxy URL string into a proxy object
@@ -17,26 +17,8 @@ export function formatProxyURL(proxyUrl: string): RoverfoxProxyObject {
       username: url.username || "",
       password: url.password || "",
     };
-  } catch (error) {
+  } catch (_error) {
     // Silently return null on parse error - caller should handle validation
     return null;
   }
-}
-
-/**
- * Creates a proxy URL from individual components
- */
-export function createProxyUrl({
-  entry,
-  port,
-  username,
-  password,
-}: {
-  entry: string;
-  port: number;
-  username: string;
-  password: string;
-}): string {
-  const proxyUrl = `http://${username}:${password}@${entry}:${port}`;
-  return proxyUrl;
 }

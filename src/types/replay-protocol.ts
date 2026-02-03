@@ -181,7 +181,7 @@ export type OutboundMessage =
 
 // Type guards for inbound messages
 export function isRegisterProfileMessage(
-  msg: BaseMessage
+  msg: BaseMessage,
 ): msg is RegisterProfileMessage {
   return (
     msg.type === "register-profile" &&
@@ -190,7 +190,7 @@ export function isRegisterProfileMessage(
 }
 
 export function isUnregisterProfileMessage(
-  msg: BaseMessage
+  msg: BaseMessage,
 ): msg is UnregisterProfileMessage {
   return (
     msg.type === "unregister-profile" &&
@@ -199,7 +199,7 @@ export function isUnregisterProfileMessage(
 }
 
 export function isScreenshotMessage(
-  msg: BaseMessage
+  msg: BaseMessage,
 ): msg is ScreenshotMessage {
   const m = msg as ScreenshotMessage;
   return (
@@ -219,7 +219,7 @@ export function isSubscribeMessage(msg: BaseMessage): msg is SubscribeMessage {
 }
 
 export function isSubscribePageMessage(
-  msg: BaseMessage
+  msg: BaseMessage,
 ): msg is SubscribePageMessage {
   const m = msg as SubscribePageMessage;
   return (
@@ -230,7 +230,7 @@ export function isSubscribePageMessage(
 }
 
 export function isPageOpenedMessage(
-  msg: BaseMessage
+  msg: BaseMessage,
 ): msg is PageOpenedMessage {
   const m = msg as PageOpenedMessage;
   return (
@@ -242,7 +242,7 @@ export function isPageOpenedMessage(
 }
 
 export function isPageClosedMessage(
-  msg: BaseMessage
+  msg: BaseMessage,
 ): msg is PageClosedMessage {
   const m = msg as PageClosedMessage;
   return (
@@ -253,7 +253,7 @@ export function isPageClosedMessage(
 }
 
 export function isStartStreamingMessage(
-  msg: BaseMessage
+  msg: BaseMessage,
 ): msg is StartStreamingMessage {
   return (
     msg.type === "start-streaming" &&
@@ -262,7 +262,7 @@ export function isStartStreamingMessage(
 }
 
 export function isStopStreamingMessage(
-  msg: BaseMessage
+  msg: BaseMessage,
 ): msg is StopStreamingMessage {
   return (
     msg.type === "stop-streaming" &&
@@ -282,7 +282,9 @@ export function isMouseMoveCommand(msg: BaseMessage): msg is MouseMoveCommand {
   );
 }
 
-export function isMouseClickCommand(msg: BaseMessage): msg is MouseClickCommand {
+export function isMouseClickCommand(
+  msg: BaseMessage,
+): msg is MouseClickCommand {
   const m = msg as MouseClickCommand;
   return (
     msg.type === "mouse-click" &&
@@ -295,7 +297,9 @@ export function isMouseClickCommand(msg: BaseMessage): msg is MouseClickCommand 
   );
 }
 
-export function isKeyboardTypeCommand(msg: BaseMessage): msg is KeyboardTypeCommand {
+export function isKeyboardTypeCommand(
+  msg: BaseMessage,
+): msg is KeyboardTypeCommand {
   const m = msg as KeyboardTypeCommand;
   return (
     msg.type === "keyboard-type" &&
@@ -305,7 +309,9 @@ export function isKeyboardTypeCommand(msg: BaseMessage): msg is KeyboardTypeComm
   );
 }
 
-export function isKeyboardPressCommand(msg: BaseMessage): msg is KeyboardPressCommand {
+export function isKeyboardPressCommand(
+  msg: BaseMessage,
+): msg is KeyboardPressCommand {
   const m = msg as KeyboardPressCommand;
   return (
     msg.type === "keyboard-press" &&
@@ -367,7 +373,7 @@ export function dispatchMessage(
   hub: IReplayHub,
   ws: any,
   message: InboundMessage,
-  handlers: MessageHandlerMap
+  handlers: MessageHandlerMap,
 ): void {
   const handler = handlers[message.type];
   if (handler) {
@@ -394,7 +400,7 @@ export interface IReplayHub {
 export type MessageHandler<T extends InboundMessage> = (
   hub: IReplayHub,
   ws: any, // WebSocket import would create circular dependency
-  message: T
+  message: T,
 ) => void;
 
 // Message handler map type
