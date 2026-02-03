@@ -66,12 +66,7 @@ export class RoverfoxClient {
   } | null = null;
   private static localPort: number = 9001;
 
-  constructor(
-    _supabase: unknown,
-    wsAPIKey: string,
-    managerUrl?: string,
-    debug: boolean = false,
-  ) {
+  constructor(wsAPIKey: string, managerUrl?: string, debug: boolean = false) {
     this.debug = debug;
     this.connectionPool = new ConnectionPool(wsAPIKey, debug);
     this.managerClient = new ManagerClient(managerUrl, debug);
@@ -130,10 +125,7 @@ export class RoverfoxClient {
             profile.data.lastKnownIP = currentIP;
 
             // Persist updated geolocation to manager
-            await this.managerClient.updateProfileData(
-              browserId,
-              profile.data,
-            );
+            await this.managerClient.updateProfileData(browserId, profile.data);
 
             if (this.debug) {
               if (changed) {
@@ -577,7 +569,7 @@ export class RoverfoxClient {
   async createProfile(
     proxyUrl: string,
     proxyId: number,
-    geoState: string | null = null,
+    // geoState: string | null = null
   ): Promise<RoverFoxProfileData> {
     const browserId = uuidv4();
     const profile: RoverFoxProfileData = {
@@ -662,5 +654,5 @@ export class RoverfoxClient {
 export { RoverfoxClient as default };
 
 // Re-export geolocation service
-export { IPGeolocationService, getGeoService } from "./ip-geolocation.js";
 export type { GeoLocationData, ProxyConfig } from "./ip-geolocation.js";
+export { getGeoService, IPGeolocationService } from "./ip-geolocation.js";

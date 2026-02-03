@@ -1,5 +1,6 @@
 // IP Geolocation Service
 // Looks up geographic info for proxy IPs using ip-api.com
+import axios from "axios";
 import { HttpsProxyAgent } from "https-proxy-agent";
 
 const IP_API_KEY = process.env.IP_API_KEY;
@@ -67,23 +68,11 @@ export class IPGeolocationService {
       const proxyUrl = `http://${auth}${proxy.host}:${proxy.port}`;
       const agent = new HttpsProxyAgent(proxyUrl);
 
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), IPIFY_TIMEOUT_MS);
-
-      const response = await fetch("https://api.ipify.org?format=json", {
-        // @ts-ignore - Node.js fetch supports agent
-        agent,
-        signal: controller.signal,
+      const { data } = await axios.get("https://api.ipify.org?format=json", {
+        httpsAgent: agent,
+        timeout: IPIFY_TIMEOUT_MS,
       });
 
-      clearTimeout(timeout);
-
-      if (!response.ok) {
-        console.warn(`ipify request failed: ${response.status}`);
-        return null;
-      }
-
-      const data = await response.json();
       const ip = data.ip;
 
       if (ip) {
@@ -161,8 +150,7 @@ export class IPGeolocationService {
         ? `${IP_API_BASE}/json/${ip}?key=${IP_API_KEY}&fields=status,message,countryCode,timezone,lat,lon,city,region`
         : `${IP_API_BASE}/json/${ip}?fields=status,message,countryCode,timezone,lat,lon,city,region`;
 
-      const response = await fetch(url);
-      const data = await response.json();
+      const { data } = await axios.get(url);
 
       if (data.status !== "success") {
         console.warn(

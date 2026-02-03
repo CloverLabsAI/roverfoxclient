@@ -1,3 +1,4 @@
+import axios from "axios";
 import extract from "extract-zip";
 import fs from "fs";
 import os from "os";
@@ -21,22 +22,12 @@ export class CamoufoxSetup {
 
   private async downloadFile(url: string, dest: string): Promise<void> {
     try {
-      // Use fetch which properly handles redirects
-      const response = await fetch(url, {
-        redirect: "follow", // Automatically follow redirects
+      const response = await axios.get(url, {
+        responseType: "arraybuffer",
+        maxRedirects: 10,
       });
 
-      if (!response.ok) {
-        throw new Error(
-          `Failed to download: ${response.status} ${response.statusText}`,
-        );
-      }
-
-      // Get the response as a buffer
-      const buffer = await response.arrayBuffer();
-
-      // Write to file
-      fs.writeFileSync(dest, Buffer.from(buffer));
+      fs.writeFileSync(dest, Buffer.from(response.data));
     } catch (error) {
       // Clean up partial download if it exists
       if (fs.existsSync(dest)) {

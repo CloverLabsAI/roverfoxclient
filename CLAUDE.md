@@ -5,6 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 
 roverfox-client is a TypeScript library for browser automation built on Playwright (Firefox). It operates in two modes:
+
 - **Distributed mode**: Connects to a Roverfox manager server to get browser server assignments, manage profiles, and enable live replay/streaming
 - **Local mode**: Runs a self-contained proxy server (`RoverfoxClient.launchLocalContext()`) with no manager dependency
 
@@ -21,6 +22,7 @@ No linter or test runner is currently configured. The `prepare` hook runs `npm r
 **Entry point**: `src/index.ts` — exports `RoverfoxClient` as the main class.
 
 **Core modules** (all in `src/`):
+
 - `connection-pool.ts` — Reuses Playwright browser connections per endpoint via WebSocket
 - `manager-client.ts` — HTTP client for the manager API (server assignment, profile CRUD, audit logging, data usage reporting)
 - `replay-manager.ts` — Live replay streaming and screenshot capture over WebSocket

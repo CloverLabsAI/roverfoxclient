@@ -2,6 +2,8 @@
  * Client for communicating with Roverfox Manager
  */
 
+import axios from "axios";
+
 import type { ServerAssignment } from "./types.js";
 
 export class ManagerClient {
@@ -21,12 +23,9 @@ export class ManagerClient {
    */
   async getServerAssignment(): Promise<ServerAssignment> {
     try {
-      const response = await fetch(`${this.managerUrl}/api/assign-server`);
-      if (!response.ok) {
-        throw new Error(`Manager returned ${response.status}`);
-      }
-
-      const assignment = await response.json();
+      const { data: assignment } = await axios.get(
+        `${this.managerUrl}/api/assign-server`,
+      );
       if (this.debug)
         console.log(`[client] Assigned to server ${assignment.serverIp}`);
       return assignment;
@@ -41,11 +40,8 @@ export class ManagerClient {
    */
   async listProfiles(): Promise<{ browser_id: string; data: any }[]> {
     try {
-      const response = await fetch(`${this.managerUrl}/api/profiles`);
-      if (!response.ok) {
-        throw new Error(`Manager returned ${response.status}`);
-      }
-      return await response.json();
+      const { data } = await axios.get(`${this.managerUrl}/api/profiles`);
+      return data;
     } catch (error) {
       if (this.debug) console.error("[client] Failed to list profiles:", error);
       throw error;
@@ -57,13 +53,10 @@ export class ManagerClient {
    */
   async getProfile(browserId: string): Promise<any> {
     try {
-      const response = await fetch(
+      const { data } = await axios.get(
         `${this.managerUrl}/api/profiles/${browserId}`,
       );
-      if (!response.ok) {
-        throw new Error(`Manager returned ${response.status}`);
-      }
-      return await response.json();
+      return data;
     } catch (error) {
       if (this.debug) console.error("[client] Failed to get profile:", error);
       throw error;
@@ -79,14 +72,11 @@ export class ManagerClient {
     proxyId: number,
   ): Promise<void> {
     try {
-      const response = await fetch(`${this.managerUrl}/api/profiles`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ browserId, profileData, proxyId }),
+      await axios.post(`${this.managerUrl}/api/profiles`, {
+        browserId,
+        profileData,
+        proxyId,
       });
-      if (!response.ok) {
-        throw new Error(`Manager returned ${response.status}`);
-      }
     } catch (error) {
       if (this.debug)
         console.error("[client] Failed to create profile:", error);
@@ -103,17 +93,10 @@ export class ManagerClient {
     proxyId?: number,
   ): Promise<void> {
     try {
-      const response = await fetch(
-        `${this.managerUrl}/api/profiles/${browserId}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ profileData, proxyId }),
-        },
-      );
-      if (!response.ok) {
-        throw new Error(`Manager returned ${response.status}`);
-      }
+      await axios.patch(`${this.managerUrl}/api/profiles/${browserId}`, {
+        profileData,
+        proxyId,
+      });
     } catch (error) {
       if (this.debug)
         console.error("[client] Failed to update profile data:", error);
@@ -126,15 +109,7 @@ export class ManagerClient {
    */
   async deleteProfile(browserId: string): Promise<void> {
     try {
-      const response = await fetch(
-        `${this.managerUrl}/api/profiles/${browserId}`,
-        {
-          method: "DELETE",
-        },
-      );
-      if (!response.ok) {
-        throw new Error(`Manager returned ${response.status}`);
-      }
+      await axios.delete(`${this.managerUrl}/api/profiles/${browserId}`);
     } catch (error) {
       if (this.debug)
         console.error("[client] Failed to delete profile:", error);
@@ -147,17 +122,10 @@ export class ManagerClient {
    */
   async updateStorage(browserId: string, storageData: any): Promise<void> {
     try {
-      const response = await fetch(
+      await axios.post(
         `${this.managerUrl}/api/profiles/${browserId}/storage`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(storageData),
-        },
+        storageData,
       );
-      if (!response.ok) {
-        throw new Error(`Manager returned ${response.status}`);
-      }
     } catch (error) {
       // Silently ignore storage update errors as they aren't critical
       if (this.debug)
@@ -174,14 +142,11 @@ export class ManagerClient {
     metadata: any,
   ): Promise<void> {
     try {
-      const response = await fetch(`${this.managerUrl}/api/audit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ browserId, actionType, metadata }),
+      await axios.post(`${this.managerUrl}/api/audit`, {
+        browserId,
+        actionType,
+        metadata,
       });
-      if (!response.ok) {
-        throw new Error(`Manager returned ${response.status}`);
-      }
     } catch (error) {
       if (this.debug) console.error("[client] Failed to log audit:", error);
     }
@@ -197,14 +162,12 @@ export class ManagerClient {
     bytes: number,
   ): Promise<void> {
     try {
-      const response = await fetch(`${this.managerUrl}/api/usage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ browserId, start, end, bytes }),
+      await axios.post(`${this.managerUrl}/api/usage`, {
+        browserId,
+        start,
+        end,
+        bytes,
       });
-      if (!response.ok) {
-        throw new Error(`Manager returned ${response.status}`);
-      }
     } catch (error) {
       if (this.debug) console.error("[client] Failed to log usage:", error);
     }

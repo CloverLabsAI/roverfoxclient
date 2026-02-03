@@ -4,15 +4,15 @@
  * for now we're going to make a copy and then clean this up later.
  */
 import AutoEncrypt from "@small-tech/auto-encrypt";
-import { createClient } from "@supabase/supabase-js";
+import axios from "axios";
 import { exec } from "child_process";
 import fs from "fs";
 import os from "os";
 import path from "path";
 import { type BrowserServer, firefox } from "playwright";
+import { fileURLToPath } from "url";
 import { promisify } from "util";
 
-import { PorkbunService } from "../utils/porkbun-service.js";
 import { AuthManager, type ServerConfig } from "./auth.js";
 import { BrowserProxy } from "./browser-proxy.js";
 import { CamoufoxSetup } from "./camoufox-setup.js";
@@ -38,8 +38,7 @@ async function getGitCommitHash(): Promise<string | null> {
  */
 async function getPublicIP(): Promise<string> {
   try {
-    const response = await fetch("https://api.ipify.org?format=json");
-    const data = await response.json();
+    const { data } = await axios.get("https://api.ipify.org?format=json");
     return (data as { ip: string }).ip;
   } catch (error) {
     console.error("[worker] Failed to get public IP:", error);
@@ -56,31 +55,33 @@ async function getEC2Metadata(): Promise<{
 }> {
   try {
     // Try to get IMDSv2 token (2s timeout to avoid hanging on non-EC2)
-    const tokenResponse = await fetch(
+    const tokenResponse = await axios.put(
       "http://169.254.169.254/latest/api/token",
+      undefined,
       {
-        method: "PUT",
         headers: { "X-aws-ec2-metadata-token-ttl-seconds": "21600" },
-        signal: AbortSignal.timeout(2000),
+        timeout: 2000,
+        responseType: "text",
       },
     );
 
-    if (!tokenResponse.ok) return { instanceId: null, hostId: null };
-    const token = await tokenResponse.text();
+    const token = tokenResponse.data;
 
-    const [idRes, hostRes] = await Promise.all([
-      fetch("http://169.254.169.254/latest/meta-data/instance-id", {
+    const [idRes, hostRes] = await Promise.allSettled([
+      axios.get("http://169.254.169.254/latest/meta-data/instance-id", {
         headers: { "X-aws-ec2-metadata-token": token },
-        signal: AbortSignal.timeout(2000),
+        timeout: 2000,
+        responseType: "text",
       }),
-      fetch("http://169.254.169.254/latest/meta-data/placement/host-id", {
+      axios.get("http://169.254.169.254/latest/meta-data/placement/host-id", {
         headers: { "X-aws-ec2-metadata-token": token },
-        signal: AbortSignal.timeout(2000),
+        timeout: 2000,
+        responseType: "text",
       }),
     ]);
 
-    const instanceId = idRes.ok ? await idRes.text() : null;
-    const hostId = hostRes.ok ? await hostRes.text() : null;
+    const instanceId = idRes.status === "fulfilled" ? idRes.value.data : null;
+    const hostId = hostRes.status === "fulfilled" ? hostRes.value.data : null;
 
     return { instanceId, hostId };
   } catch {
@@ -572,114 +573,57 @@ export class RoverFoxProxyServer {
   }
 
   /**
-   * Converts IP address to subdomain using same logic as Porkbun service
+   * Gets the manager URL from environment or default
    */
-  private ipToSubdomain(ip: string): string {
-    const parts = ip.split(".");
-
-    if (parts.length !== 4) {
-      throw new Error("Invalid IP address format");
-    }
-
-    // Convert IP to a single number (IPv4 as 32-bit integer)
-    const ipAsNumber = parts.reduce((acc, octet) => {
-      return (acc << 8) + parseInt(octet, 10);
-    }, 0);
-
-    // Convert to base36 for compact alphanumeric representation
-    const base36Id = ipAsNumber.toString(36);
-
-    return `${base36Id}.macm2`;
+  private getManagerUrl(): string | null {
+    return (
+      process.env.ROVERFOX_MANAGER_URL ||
+      (process.env.MANAGER_DOMAIN
+        ? `https://${process.env.MANAGER_DOMAIN}`
+        : null)
+    );
   }
 
   /**
-   * Registers server in database for distributed architecture
+   * Builds authorization headers for manager API calls
+   */
+  private getAuthHeaders(): Record<string, string> {
+    const apiKey = process.env.ROVERFOX_API_KEY;
+    return apiKey ? { Authorization: `Bearer ${apiKey}` } : {};
+  }
+
+  /**
+   * Registers server in database via manager API
    */
   private async registerServer(): Promise<void> {
-    // Skip registration if SUPABASE_URL is not configured
-    if (!process.env.SUPABASE_URL) {
+    const managerUrl = this.getManagerUrl();
+    if (!managerUrl) {
       console.log(
-        "[server] Skipping registration - SUPABASE_URL not configured (running in standalone mode)",
+        "[server] Skipping registration - no manager URL configured (running in standalone mode)",
       );
       return;
     }
 
     try {
-      const supabase = createClient(
-        process.env.SUPABASE_URL!,
-        process.env.SUPABASE_KEY!,
-      );
-
       this.serverIp = await this.getPublicIP();
       const { instanceId, hostId } = await getEC2Metadata();
-      const subdomain = this.ipToSubdomain(this.serverIp);
-      const domain = process.env.PORKBUN_DOMAIN || "monitico.com";
 
-      // Create DNS subdomain for this worker using Porkbun API
-      const porkbunService = new PorkbunService();
-      const createdSubdomain = await porkbunService.createSubdomainForIp(
-        this.serverIp,
+      const { data } = await axios.post(
+        `${managerUrl}/api/servers/register`,
+        {
+          ip: this.serverIp,
+          proxyPath: this.config.proxyPath,
+          replayPath: this.config.replayPath,
+          instanceId,
+          hostId,
+        },
+        { headers: this.getAuthHeaders() },
       );
-      if (createdSubdomain) {
-        console.log(
-          `[server] DNS subdomain created: ${createdSubdomain}.${domain}`,
-        );
-      } else {
-        console.warn(
-          `[server] Failed to create DNS subdomain, continuing anyway...`,
-        );
-      }
 
-      // Check if server with this IP already exists
-      const { data: existing } = await supabase
-        .from("roverfox_servers")
-        .select("id")
-        .eq("ip", this.serverIp)
-        .single();
-
-      if (existing) {
-        // Server already exists, reuse the record
-        this.serverId = existing.id;
-
-        // Reset metrics but preserve state (don't override 'terminating')
-        await supabase
-          .from("roverfox_servers")
-          .update({
-            memory_usage: 0,
-            active_contexts: 0,
-            instance_id: instanceId,
-            host_id: hostId,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", this.serverId);
-
-        console.log(
-          `[server] Reusing existing record with ID: ${this.serverId}, IP: ${this.serverIp}`,
-        );
-      } else {
-        // Insert new server record with 'pending' state
-        const { data, error } = await supabase
-          .from("roverfox_servers")
-          .insert({
-            ip: this.serverIp,
-            roverfox_websocket_url: `wss://${subdomain}.${domain}${this.config.proxyPath}`,
-            replay_websocket_url: `wss://${subdomain}.${domain}${this.config.replayPath}`,
-            state: "pending",
-            memory_usage: 0,
-            active_contexts: 0,
-            instance_id: instanceId,
-            host_id: hostId,
-          })
-          .select("id")
-          .single();
-
-        if (error) throw error;
-        this.serverId = data.id;
-        console.log(
-          `[server] Registered with ID: ${this.serverId}, IP: ${this.serverIp} (state: pending)`,
-        );
-        console.log(`[server] Subdomain: ${subdomain}.${domain}`);
-      }
+      this.serverId = (data as { serverId: string }).serverId;
+      console.log(
+        `[server] Registered with ID: ${this.serverId}, IP: ${this.serverIp}`,
+      );
     } catch (error) {
       console.error("[server] Failed to register server:", error);
       // Don't throw - allow server to run in standalone mode
@@ -687,23 +631,22 @@ export class RoverFoxProxyServer {
   }
 
   /**
-   * Activates the server by setting state to 'active'
+   * Activates the server by setting state to 'active' via manager API
    */
   async activateServer(): Promise<void> {
     if (!this.serverId) return;
 
+    const managerUrl = this.getManagerUrl();
+    if (!managerUrl) return;
+
     try {
-      const supabase = createClient(
-        process.env.SUPABASE_URL!,
-        process.env.SUPABASE_KEY!,
+      await axios.post(
+        `${managerUrl}/api/servers/${this.serverId}/activate`,
+        undefined,
+        { headers: this.getAuthHeaders() },
       );
 
-      await supabase
-        .from("roverfox_servers")
-        .update({ state: "active" })
-        .eq("id", this.serverId);
-
-      console.log(`[server] ✓ Server activated (ID: ${this.serverId})`);
+      console.log(`[server] Server activated (ID: ${this.serverId})`);
     } catch (error) {
       console.error("[server] Failed to activate server:", error);
     }
@@ -714,8 +657,7 @@ export class RoverFoxProxyServer {
    */
   private async getPublicIP(): Promise<string> {
     try {
-      const response = await fetch("https://api.ipify.org?format=json");
-      const data = await response.json();
+      const { data } = await axios.get("https://api.ipify.org?format=json");
       return (data as { ip: string }).ip;
     } catch (error) {
       console.error("[server] Failed to get public IP:", error);
@@ -741,29 +683,25 @@ export class RoverFoxProxyServer {
   }
 
   /**
-   * Reports current metrics to database
+   * Reports current metrics via manager API
    */
   private async reportMetrics(): Promise<void> {
-    if (!this.serverId || !process.env.SUPABASE_URL) {
+    const managerUrl = this.getManagerUrl();
+    if (!this.serverId || !managerUrl) {
       return;
     }
 
     try {
-      const supabase = createClient(
-        process.env.SUPABASE_URL!,
-        process.env.SUPABASE_KEY!,
-      );
-
       const metrics = await this.getMetrics();
 
-      await supabase
-        .from("roverfox_servers")
-        .update({
-          memory_usage: metrics.memoryUsagePercent,
-          active_contexts: metrics.activeContexts,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", this.serverId);
+      await axios.post(
+        `${managerUrl}/api/servers/${this.serverId}/metrics`,
+        {
+          memoryUsage: metrics.memoryUsagePercent,
+          activeContexts: metrics.activeContexts,
+        },
+        { headers: this.getAuthHeaders() },
+      );
 
       console.log(
         `[server] Metrics reported: ${metrics.activeContexts} contexts, ` +
@@ -831,8 +769,8 @@ async function main() {
   console.log("[worker] Waiting for HTTPS endpoint to become reachable...");
   const activationInterval = setInterval(async () => {
     try {
-      await fetch(`https://${workerDomain}/`, {
-        signal: AbortSignal.timeout(5000), // 5 second timeout
+      await axios.get(`https://${workerDomain}/`, {
+        timeout: 5000,
       });
 
       // If we get here, the endpoint is reachable
