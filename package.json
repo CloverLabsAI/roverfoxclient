@@ -1,5 +1,5 @@
 {
-  "name": "roverfox-client",
+  "name": "roverfox",
   "version": "1.0.0",
   "type": "module",
   "main": "dist/index.js",
@@ -8,13 +8,6 @@
     "dist",
     "README.md"
   ],
-  "scripts": {
-    "lint": "prettier --ignore-path ../../.prettierignore --write . && eslint . --fix",
-    "lint.check": "prettier --ignore-path ../../.prettierignore --check . && eslint . --max-warnings 0",
-    "check-types": "tsc --noEmit",
-    "build": "rollup -c && cp -r src/scripts dist/scripts && cp src/browserConfig.json dist/browserConfig.json",
-    "prepublishOnly": "npm run build"
-  },
   "keywords": [
     "browser",
     "automation",
@@ -25,7 +18,6 @@
   ],
   "author": "",
   "description": "A browser automation client built on Playwright for Firefox",
-  "prettier": "@roverfox/prettier-config",
   "dependencies": {
     "@logtail/node": "^0.5.6",
     "@small-tech/auto-encrypt": "^4.3.0",
@@ -39,15 +31,9 @@
     "@rollup/plugin-json": "^6.1.0",
     "@rollup/plugin-node-resolve": "^16.0.3",
     "@rollup/plugin-typescript": "^12.3.0",
-    "@roverfox/eslint-config": "*",
-    "@roverfox/prettier-config": "*",
-    "@roverfox/typescript-config": "*",
     "@types/ws": "^8.18.1",
     "rollup": "^4.57.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
-  },
-  "optionalDependencies": {
-    "@rollup/rollup-linux-x64-gnu": "4.57.1"
   }
 }
