@@ -25,14 +25,18 @@
   "license": "ISC",
   "description": "A browser automation client built on Playwright for Firefox",
   "dependencies": {
+    "@logtail/node": "^0.5.6",
     "@supabase/supabase-js": "2.50.5",
+    "@types/extract-zip": "^2.0.0",
+    "axios": "^1.13.4",
+    "extract-zip": "^2.0.1",
     "playwright": "^1.56.1",
     "uuid": "^11.1.0",
     "ws": "^8.18.3"
   },
   "devDependencies": {
-    "@types/ws": "^8.18.1",
     "@types/uuid": "^10.0.0",
+    "@types/ws": "^8.18.1",
     "typescript": "^5.8.3"
   }
 }

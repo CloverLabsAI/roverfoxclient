@@ -10,7 +10,6 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { type BrowserServer, firefox } from "playwright";
-import { fileURLToPath } from "url";
 import { promisify } from "util";
 
 import { PorkbunService } from "../utils/porkbun-service.js";
@@ -872,6 +871,6 @@ async function main() {
 }
 
 // Only run main() if this file is executed directly, not when imported
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (require.main === module) {
   main();
 }
