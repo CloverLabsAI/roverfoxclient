@@ -17,6 +17,33 @@ import { DataUsageTracker } from "./data-usage-tracker";
 import { formatProxyURL } from "./utils";
 import { IPGeolocationService, ProxyConfig } from "./ip-geolocation";
 
+// macOS-compatible screen resolutions for realistic fingerprinting
+const COMMON_SCREEN_RESOLUTIONS = [
+  { width: 1920, height: 1080 }, // External monitor (very common)
+  { width: 1440, height: 900 }, // 15" MacBook Pro default
+  { width: 2560, height: 1440 }, // External monitor QHD
+  { width: 1680, height: 1050 }, // Older MacBook Pro
+  { width: 2560, height: 1600 }, // 16" MacBook Pro
+  { width: 3024, height: 1964 }, // 14" MacBook Pro
+  { width: 2880, height: 1800 }, // 15" Retina MacBook Pro
+];
+
+function generateScreenDimensions(): {
+  width: number;
+  height: number;
+  colorDepth: number;
+} {
+  const resolution =
+    COMMON_SCREEN_RESOLUTIONS[
+      Math.floor(Math.random() * COMMON_SCREEN_RESOLUTIONS.length)
+    ];
+  return {
+    width: resolution.width,
+    height: resolution.height,
+    colorDepth: 24,
+  };
+}
+
 export class RoverfoxClient {
   private supabaseClient: SupabaseClient;
   private connectionPool: ConnectionPool;
@@ -172,6 +199,8 @@ export class RoverfoxClient {
         browser_id: browserId,
         data: {
           fontSpacingSeed: Math.floor(Math.random() * 100000000),
+          audioFingerprintSeed: Math.floor(Math.random() * 0xffffffff) + 1,
+          screenDimensions: generateScreenDimensions(),
           storageState: {
             cookies: [],
             origins: [],
@@ -341,13 +370,15 @@ export class RoverfoxClient {
   async createProfile(
     proxyUrl: string,
     proxyId: number,
-    proxyState: string | null = null,
+    geoState: string | null = null,
   ): Promise<RoverFoxProfileData> {
     const browserId = uuidv4();
     const profile: RoverFoxProfileData = {
       browser_id: browserId,
       data: {
         fontSpacingSeed: Math.floor(Math.random() * 100000000),
+        audioFingerprintSeed: Math.floor(Math.random() * 0xffffffff) + 1,
+        screenDimensions: generateScreenDimensions(),
         storageState: {
           cookies: [],
           origins: [],
@@ -355,6 +386,10 @@ export class RoverfoxClient {
         proxyUrl: proxyUrl,
       },
     };
+
+    // Track detected geo for accounts table
+    let detectedLat: number | null = null;
+    let detectedLon: number | null = null;
 
     // Get proxy credentials to lookup geolocation via actual exit IP
     const { data: proxyData } = await this.supabaseClient
@@ -379,6 +414,10 @@ export class RoverfoxClient {
         profile.data.countryCode = result.geo.countryCode;
         profile.data.lastKnownIP = result.ip;
 
+        // Store for accounts table
+        detectedLat = result.geo.lat;
+        detectedLon = result.geo.lon;
+
         if (this.debug) {
           console.log(
             `Profile ${browserId} created with IP ${result.ip}, timezone ${result.geo.timezone}`,
@@ -391,7 +430,9 @@ export class RoverfoxClient {
       browserId: browserId,
       platform: "roverfox",
       proxyId: proxyId,
-      proxyState: proxyState,
+      geo_state: geoState,
+      geo_latitude: detectedLat,
+      geo_longitude: detectedLon,
     });
 
     await this.supabaseClient.from("redrover_profile_data").insert(profile);
