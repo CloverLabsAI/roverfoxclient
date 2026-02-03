@@ -30,6 +30,7 @@
     "@types/extract-zip": "^2.0.0",
     "axios": "^1.13.4",
     "extract-zip": "^2.0.1",
+    "https-proxy-agent": "^7.0.6",
     "playwright": "1.56.1",
     "uuid": "^11.1.0",
     "ws": "^8.18.3"

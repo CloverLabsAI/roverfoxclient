@@ -11,6 +11,7 @@ import WebSocket from "ws";
 
 import { ConnectionPool } from "./connection-pool.js";
 import { DataUsageTracker } from "./data-usage-tracker.js";
+import { IPGeolocationService, ProxyConfig } from "./ip-geolocation.js";
 import { ManagerClient } from "./manager-client.js";
 import { ReplayManager } from "./replay-manager.js";
 import { StorageManager } from "./storage-manager.js";
@@ -21,12 +22,40 @@ import { formatProxyURL } from "./utils/proxies.js";
 import type { ServerConfig } from "./worker/auth.js";
 import { RoverFoxProxyServer } from "./worker/index.js";
 
+// macOS-compatible screen resolutions for realistic fingerprinting
+const COMMON_SCREEN_RESOLUTIONS = [
+  { width: 1920, height: 1080 }, // External monitor (very common)
+  { width: 1440, height: 900 }, // 15" MacBook Pro default
+  { width: 2560, height: 1440 }, // External monitor QHD
+  { width: 1680, height: 1050 }, // Older MacBook Pro
+  { width: 2560, height: 1600 }, // 16" MacBook Pro
+  { width: 3024, height: 1964 }, // 14" MacBook Pro
+  { width: 2880, height: 1800 }, // 15" Retina MacBook Pro
+];
+
+function generateScreenDimensions(): {
+  width: number;
+  height: number;
+  colorDepth: number;
+} {
+  const resolution =
+    COMMON_SCREEN_RESOLUTIONS[
+      Math.floor(Math.random() * COMMON_SCREEN_RESOLUTIONS.length)
+    ];
+  return {
+    width: resolution.width,
+    height: resolution.height,
+    colorDepth: 24,
+  };
+}
+
 export class RoverfoxClient {
   private connectionPool: ConnectionPool;
   private managerClient: ManagerClient;
   private replayManager: ReplayManager;
   private storageManager: StorageManager;
   private dataUsageTrackers: Map<string, DataUsageTracker>;
+  private geoService: IPGeolocationService;
   private debug: boolean;
 
   // Local server management
@@ -49,6 +78,7 @@ export class RoverfoxClient {
     this.replayManager = new ReplayManager();
     this.storageManager = new StorageManager(this.managerClient);
     this.dataUsageTrackers = new Map();
+    this.geoService = new IPGeolocationService();
 
     // Set up streaming message handler
     this.connectionPool.setStreamingMessageHandler((message) => {
@@ -74,6 +104,54 @@ export class RoverfoxClient {
     // Fetch profile and proxy data from Manager API
     const { profile, proxy: proxyObject } =
       await this.managerClient.getProfile(browserId);
+
+    // Check if geolocation needs updating based on proxy exit IP
+    if (proxyObject) {
+      try {
+        const serverUrl = new URL(proxyObject.server);
+        const proxyConfig: ProxyConfig = {
+          host: serverUrl.hostname,
+          port: parseInt(serverUrl.port) || 80,
+          username: proxyObject.username || undefined,
+          password: proxyObject.password || undefined,
+        };
+
+        const { changed, currentIP } = await this.geoService.hasIPChanged(
+          proxyConfig,
+          profile.data.lastKnownIP || null,
+        );
+
+        if (currentIP && (changed || !profile.data.timezone)) {
+          const geoData = await this.geoService.lookup(currentIP);
+          if (geoData) {
+            profile.data.timezone = geoData.timezone;
+            profile.data.geolocation = { lat: geoData.lat, lon: geoData.lon };
+            profile.data.countryCode = geoData.countryCode;
+            profile.data.lastKnownIP = currentIP;
+
+            // Persist updated geolocation to manager
+            await this.managerClient.updateProfileData(
+              browserId,
+              profile.data,
+            );
+
+            if (this.debug) {
+              if (changed) {
+                console.log(
+                  `[client] IP changed for ${browserId}: ${profile.data.lastKnownIP} -> ${currentIP}, updated geolocation to ${geoData.timezone}`,
+                );
+              } else {
+                console.log(
+                  `[client] Geolocation set for ${browserId}: ${geoData.timezone}`,
+                );
+              }
+            }
+          }
+        }
+      } catch (_e) {
+        // Non-critical: continue without geolocation update
+      }
+    }
 
     // Create browser context with profile data
     return this.launchInstance(
@@ -108,6 +186,8 @@ export class RoverfoxClient {
         browser_id: browserId,
         data: {
           fontSpacingSeed: Math.floor(Math.random() * 100000000),
+          audioFingerprintSeed: Math.floor(Math.random() * 0xffffffff) + 1,
+          screenDimensions: generateScreenDimensions(),
           storageState: {
             cookies: [],
             origins: [],
@@ -230,6 +310,8 @@ export class RoverfoxClient {
       browser_id: browserId,
       data: {
         fontSpacingSeed: Math.floor(Math.random() * 100000000),
+        audioFingerprintSeed: Math.floor(Math.random() * 0xffffffff) + 1,
+        screenDimensions: generateScreenDimensions(),
         storageState: {
           cookies: [],
           origins: [],
@@ -495,12 +577,15 @@ export class RoverfoxClient {
   async createProfile(
     proxyUrl: string,
     proxyId: number,
+    geoState: string | null = null,
   ): Promise<RoverFoxProfileData> {
     const browserId = uuidv4();
     const profile: RoverFoxProfileData = {
       browser_id: browserId,
       data: {
         fontSpacingSeed: Math.floor(Math.random() * 100000000),
+        audioFingerprintSeed: Math.floor(Math.random() * 0xffffffff) + 1,
+        screenDimensions: generateScreenDimensions(),
         storageState: {
           cookies: [],
           origins: [],
@@ -508,6 +593,33 @@ export class RoverfoxClient {
         proxyUrl: proxyUrl,
       },
     };
+
+    // Lookup geolocation via the proxy's actual exit IP
+    try {
+      const parsed = new URL(proxyUrl);
+      const proxyConfig: ProxyConfig = {
+        host: parsed.hostname,
+        port: parseInt(parsed.port) || 80,
+        username: parsed.username || undefined,
+        password: parsed.password || undefined,
+      };
+
+      const result = await this.geoService.lookupThroughProxy(proxyConfig);
+      if (result) {
+        profile.data.timezone = result.geo.timezone;
+        profile.data.geolocation = { lat: result.geo.lat, lon: result.geo.lon };
+        profile.data.countryCode = result.geo.countryCode;
+        profile.data.lastKnownIP = result.ip;
+
+        if (this.debug) {
+          console.log(
+            `[client] Profile ${browserId} created with IP ${result.ip}, timezone ${result.geo.timezone}`,
+          );
+        }
+      }
+    } catch (_e) {
+      // Non-critical: continue without geolocation
+    }
 
     await this.managerClient.createProfile(browserId, profile.data, proxyId);
 
@@ -548,3 +660,7 @@ export class RoverfoxClient {
 }
 
 export { RoverfoxClient as default };
+
+// Re-export geolocation service
+export { IPGeolocationService, getGeoService } from "./ip-geolocation.js";
+export type { GeoLocationData, ProxyConfig } from "./ip-geolocation.js";

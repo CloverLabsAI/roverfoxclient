@@ -57,6 +57,19 @@ export interface ProfileStorageData {
   proxyUrl: string | null;
   storageState: StorageState;
   fontSpacingSeed: number;
+  audioFingerprintSeed?: number;
+  screenDimensions?: {
+    width: number;
+    height: number;
+    colorDepth?: number;
+  };
+  timezone?: string;
+  geolocation?: {
+    lat: number;
+    lon: number;
+  };
+  countryCode?: string;
+  lastKnownIP?: string;
 }
 
 export type RoverFoxProfileData = {
