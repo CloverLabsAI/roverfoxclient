@@ -33,7 +33,7 @@ async function _exportIndexedDB() {
         };
 
         // Start transaction to read store data
-        const transaction = db.transaction([storeName], "readonly");
+        const transaction = db.transaction([storeName], 'readonly');
         const store = transaction.objectStore(storeName);
 
         // Get store metadata
@@ -115,7 +115,7 @@ function cleanValue(value) {
   }
 
   // Handle primitive types
-  if (typeof value !== "object") {
+  if (typeof value !== 'object') {
     return value;
   }
 

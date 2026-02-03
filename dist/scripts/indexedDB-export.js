@@ -1,3 +1,4 @@
+/* global indexedDB, console */
 async function _exportIndexedDB() {
   const databases = [];
 
@@ -32,7 +33,7 @@ async function _exportIndexedDB() {
         };
 
         // Start transaction to read store data
-        const transaction = db.transaction([storeName], "readonly");
+        const transaction = db.transaction([storeName], 'readonly');
         const store = transaction.objectStore(storeName);
 
         // Get store metadata
@@ -114,13 +115,13 @@ function cleanValue(value) {
   }
 
   // Handle primitive types
-  if (typeof value !== "object") {
+  if (typeof value !== 'object') {
     return value;
   }
 
   // Handle arrays
   if (Array.isArray(value)) {
-    return value.map(item => cleanValue(item));
+    return value.map((item) => cleanValue(item));
   }
 
   // Handle objects - create clean copy
@@ -132,18 +133,20 @@ function cleanValue(value) {
   return cleaned;
 }
 
+// exportIndexedDB is used via page.evaluate
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function exportIndexedDB() {
   const databases = await _exportIndexedDB();
 
-  return databases.map(db => ({
+  return databases.map((db) => ({
     name: db.name,
     version: db.version,
-    stores: db.stores.map(store => ({
+    stores: db.stores.map((store) => ({
       name: store.name,
       autoIncrement: store.autoIncrement,
       keyPathArray: store.keyPathArray,
       records: store.records,
-      indexes: store.indexes
-    }))
+      indexes: store.indexes,
+    })),
   }));
 }

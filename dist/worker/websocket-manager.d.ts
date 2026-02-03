@@ -1,6 +1,6 @@
-import { AuthManager, type ServerConfig } from "./auth.js";
-import { BrowserProxy } from "./browser-proxy.js";
-import { ReplayHub } from "./replay-hub.js";
+import { AuthManager, type ServerConfig } from './auth.js';
+import { BrowserProxy } from './browser-proxy.js';
+import { ReplayHub } from './replay-hub.js';
 export declare class WebSocketManager {
     private config;
     private replayHub;

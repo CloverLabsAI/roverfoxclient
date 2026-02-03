@@ -2,8 +2,8 @@
  * Roverfox Client - Main entry point
  * Connects to distributed Roverfox servers via manager
  */
-import { BrowserContext } from "playwright";
-import type { RoverFoxProfileData } from "./types/client.js";
+import { BrowserContext } from 'playwright';
+import type { RoverFoxProfileData } from './types/client.js';
 export declare class RoverfoxClient {
     private connectionPool;
     private managerClient;
@@ -80,5 +80,5 @@ export declare class RoverfoxClient {
     getProfileData(browserId: string): Promise<any>;
 }
 export { RoverfoxClient as default };
-export type { GeoLocationData, ProxyConfig } from "./ip-geolocation.js";
-export { getGeoService, IPGeolocationService } from "./ip-geolocation.js";
+export type { GeoLocationData, ProxyConfig } from './ip-geolocation.js';
+export { getGeoService, IPGeolocationService } from './ip-geolocation.js';

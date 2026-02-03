@@ -1,8 +1,8 @@
 /**
  * Connection pool manager for multiple Roverfox servers
  */
-import { Browser } from "playwright";
-import WebSocket from "ws";
+import { Browser } from 'playwright';
+import WebSocket from 'ws';
 export declare class ConnectionPool {
     private browsers;
     private replayWebSockets;

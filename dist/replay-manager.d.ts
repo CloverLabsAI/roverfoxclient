@@ -1,9 +1,9 @@
 /**
  * Replay and screenshot streaming management
  */
-import { Page } from "playwright";
-import WebSocket from "ws";
-import type { ConnectionPool } from "./connection-pool.js";
+import { Page } from 'playwright';
+import WebSocket from 'ws';
+import type { ConnectionPool } from './connection-pool.js';
 export declare class ReplayManager {
     private mousePositions;
     private streamingEnabled;

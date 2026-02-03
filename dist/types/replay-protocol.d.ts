@@ -2,15 +2,15 @@ export interface BaseMessage {
     type: string;
 }
 export interface RegisterProfileMessage extends BaseMessage {
-    type: "register-profile";
+    type: 'register-profile';
     uuid: string;
 }
 export interface UnregisterProfileMessage extends BaseMessage {
-    type: "unregister-profile";
+    type: 'unregister-profile';
     uuid: string;
 }
 export interface ScreenshotMessage extends BaseMessage {
-    type: "screenshot";
+    type: 'screenshot';
     uuid: string;
     pageId: string;
     pageTitle: string;
@@ -19,57 +19,57 @@ export interface ScreenshotMessage extends BaseMessage {
     mouseY?: number;
 }
 export interface SubscribeMessage extends BaseMessage {
-    type: "subscribe";
+    type: 'subscribe';
     uuid: string;
 }
 export interface SubscribePageMessage extends BaseMessage {
-    type: "subscribe-page";
+    type: 'subscribe-page';
     uuid: string;
     pageId: string;
 }
 export interface PageOpenedMessage extends BaseMessage {
-    type: "page-opened";
+    type: 'page-opened';
     uuid: string;
     pageId: string;
     pageTitle: string;
 }
 export interface PageClosedMessage extends BaseMessage {
-    type: "page-closed";
+    type: 'page-closed';
     uuid: string;
     pageId: string;
 }
 export interface StartStreamingMessage extends BaseMessage {
-    type: "start-streaming";
+    type: 'start-streaming';
     uuid: string;
 }
 export interface StopStreamingMessage extends BaseMessage {
-    type: "stop-streaming";
+    type: 'stop-streaming';
     uuid: string;
 }
 export interface MouseMoveCommand extends BaseMessage {
-    type: "mouse-move";
+    type: 'mouse-move';
     uuid: string;
     pageId: string;
     x: number;
     y: number;
 }
 export interface MouseClickCommand extends BaseMessage {
-    type: "mouse-click";
+    type: 'mouse-click';
     uuid: string;
     pageId: string;
     x: number;
     y: number;
-    button: "left" | "right" | "middle";
+    button: 'left' | 'right' | 'middle';
     clickCount: 1 | 2;
 }
 export interface KeyboardTypeCommand extends BaseMessage {
-    type: "keyboard-type";
+    type: 'keyboard-type';
     uuid: string;
     pageId: string;
     text: string;
 }
 export interface KeyboardPressCommand extends BaseMessage {
-    type: "keyboard-press";
+    type: 'keyboard-press';
     uuid: string;
     pageId: string;
     key: string;
@@ -81,7 +81,7 @@ export interface KeyboardPressCommand extends BaseMessage {
     };
 }
 export interface ScrollCommand extends BaseMessage {
-    type: "scroll";
+    type: 'scroll';
     uuid: string;
     pageId: string;
     deltaX: number;
@@ -90,11 +90,11 @@ export interface ScrollCommand extends BaseMessage {
 export type InputCommand = MouseMoveCommand | MouseClickCommand | KeyboardTypeCommand | KeyboardPressCommand | ScrollCommand;
 export type InboundMessage = RegisterProfileMessage | UnregisterProfileMessage | ScreenshotMessage | SubscribeMessage | SubscribePageMessage | PageOpenedMessage | PageClosedMessage | StartStreamingMessage | StopStreamingMessage | MouseMoveCommand | MouseClickCommand | KeyboardTypeCommand | KeyboardPressCommand | ScrollCommand;
 export interface ProfilesUpdatedMessage extends BaseMessage {
-    type: "profiles-updated";
+    type: 'profiles-updated';
     profiles: string[];
 }
 export interface NewScreenshotMessage extends BaseMessage {
-    type: "new-screenshot";
+    type: 'new-screenshot';
     uuid: string;
     pageId: string;
     pageTitle?: string;
@@ -103,7 +103,7 @@ export interface NewScreenshotMessage extends BaseMessage {
     mouseY?: number;
 }
 export interface PagesUpdatedMessage extends BaseMessage {
-    type: "pages-updated";
+    type: 'pages-updated';
     uuid: string;
     pages: Array<{
         pageId: string;
@@ -111,17 +111,17 @@ export interface PagesUpdatedMessage extends BaseMessage {
     }>;
 }
 export interface StreamEndedMessage extends BaseMessage {
-    type: "stream-ended";
+    type: 'stream-ended';
     uuid: string;
 }
 export interface PageOpenedNotificationMessage extends BaseMessage {
-    type: "page-opened";
+    type: 'page-opened';
     uuid: string;
     pageId: string;
     pageTitle: string;
 }
 export interface PageClosedNotificationMessage extends BaseMessage {
-    type: "page-closed";
+    type: 'page-closed';
     uuid: string;
     pageId: string;
 }
@@ -159,7 +159,7 @@ export interface IReplayHub {
 export type MessageHandler<T extends InboundMessage> = (hub: IReplayHub, ws: any, // WebSocket import would create circular dependency
 message: T) => void;
 export type MessageHandlerMap = {
-    [K in InboundMessage["type"]]: MessageHandler<Extract<InboundMessage, {
+    [K in InboundMessage['type']]: MessageHandler<Extract<InboundMessage, {
         type: K;
     }>>;
 };

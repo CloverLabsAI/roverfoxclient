@@ -1,9 +1,9 @@
 /**
  * Storage management for browser profiles
  */
-import { Page } from "playwright";
-import { ManagerClient } from "./manager-client.js";
-import type { RoverFoxProfileData } from "./types/client.js";
+import { Page } from 'playwright';
+import { ManagerClient } from './manager-client.js';
+import type { RoverFoxProfileData } from './types/client.js';
 export declare class StorageManager {
     private managerClient;
     private scriptsCache;

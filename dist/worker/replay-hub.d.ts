@@ -1,7 +1,7 @@
-import WebSocket from "ws";
-import { type InputCommand, type OutboundMessage, type PageClosedMessage, type PageOpenedMessage, type RegisterProfileMessage, type ScreenshotMessage, type SubscribeMessage, type SubscribePageMessage, type UnregisterProfileMessage } from "../types/replay-protocol.js";
+import WebSocket from 'ws';
+import { type InputCommand, type OutboundMessage, type PageClosedMessage, type PageOpenedMessage, type RegisterProfileMessage, type ScreenshotMessage, type SubscribeMessage, type SubscribePageMessage, type UnregisterProfileMessage } from '../types/replay-protocol.js';
 export interface ClientMeta {
-    type: "producer" | "viewer" | "proxy";
+    type: 'producer' | 'viewer' | 'proxy';
     uuid?: string;
 }
 export interface PageInfo {

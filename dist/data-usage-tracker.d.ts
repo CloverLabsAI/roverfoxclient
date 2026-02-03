@@ -1,7 +1,7 @@
 /**
  * DataUsageTracker - Tracks network data usage per browser context
  */
-import { Page } from "playwright";
+import { Page } from 'playwright';
 interface NetworkRequestLog {
     url: string;
     method: string;

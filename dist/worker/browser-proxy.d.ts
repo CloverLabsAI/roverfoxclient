@@ -1,5 +1,5 @@
-import type { BrowserServer } from "playwright";
-import WebSocket, { type RawData } from "ws";
+import type { BrowserServer } from 'playwright';
+import WebSocket, { type RawData } from 'ws';
 export declare class BrowserProxy {
     private clients;
     private browserServers;

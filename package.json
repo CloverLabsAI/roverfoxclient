@@ -1,6 +1,7 @@
 {
   "name": "roverfox-client",
   "version": "1.0.0",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
@@ -8,8 +9,10 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsc && cp -r src/scripts dist/scripts",
-    "prepare": "npm run build",
+    "lint": "prettier --ignore-path ../../.prettierignore --write . && eslint . --fix",
+    "lint.check": "prettier --ignore-path ../../.prettierignore --check . && eslint . --max-warnings 0",
+    "check-types": "tsc --noEmit",
+    "build": "rollup -c && cp -r src/scripts dist/scripts && cp src/browserConfig.json dist/browserConfig.json",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -18,26 +21,33 @@
     "playwright",
     "firefox",
     "testing",
-    "web-scraping",
-    "roverfox"
+    "web-scraping"
   ],
   "author": "",
-  "license": "ISC",
   "description": "A browser automation client built on Playwright for Firefox",
+  "prettier": "@roverfox/prettier-config",
   "dependencies": {
     "@logtail/node": "^0.5.6",
-    "@supabase/supabase-js": "2.50.5",
-    "@types/extract-zip": "^2.0.0",
-    "axios": "^1.13.4",
-    "extract-zip": "^2.0.1",
-    "https-proxy-agent": "^7.0.6",
-    "playwright": "1.56.1",
+    "@small-tech/auto-encrypt": "^4.3.0",
+    "axios": "^1.11.0",
+    "playwright": "^1.56.1",
     "uuid": "^11.1.0",
     "ws": "^8.18.3"
   },
   "devDependencies": {
-    "@types/uuid": "^10.0.0",
+    "@rollup/plugin-commonjs": "^29.0.0",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@rollup/plugin-typescript": "^12.3.0",
+    "@roverfox/eslint-config": "*",
+    "@roverfox/prettier-config": "*",
+    "@roverfox/typescript-config": "*",
     "@types/ws": "^8.18.1",
+    "rollup": "^4.57.0",
+    "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "4.57.1"
   }
 }

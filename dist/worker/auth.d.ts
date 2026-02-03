@@ -1,5 +1,5 @@
-import type { IncomingMessage } from "http";
-import type { Server as HttpsServer } from "https";
+import type { IncomingMessage } from 'http';
+import type { Server as HttpsServer } from 'https';
 export interface AuthCredentials {
     user: string;
     pass: string;

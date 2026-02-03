@@ -1,4 +1,4 @@
-export type LoggedActivityType = "scroll" | "upvote" | "comment" | "post" | "openContext" | "closeContext" | "joinSubreddit";
+export type LoggedActivityType = 'scroll' | 'upvote' | 'comment' | 'post' | 'openContext' | 'closeContext' | 'joinSubreddit';
 export interface Cookie {
     name: string;
     path: string;
@@ -7,7 +7,7 @@ export interface Cookie {
     secure: boolean;
     expires: number;
     httpOnly: boolean;
-    sameSite: "Strict" | "Lax" | "None";
+    sameSite: 'Strict' | 'Lax' | 'None';
 }
 export interface IndexedDBRecord {
     key?: string;

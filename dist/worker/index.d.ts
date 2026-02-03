@@ -1,4 +1,4 @@
-import { type ServerConfig } from "./auth.js";
+import { type ServerConfig } from './auth.js';
 export declare class RoverFoxProxyServer {
     private config;
     private browserServers;

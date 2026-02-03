@@ -1,3 +1,5 @@
+/* global localStorage */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function exportLocalStorage() {
   const storageData = [];
 

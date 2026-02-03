@@ -1,7 +1,7 @@
 /**
  * Client for communicating with Roverfox Manager
  */
-import type { ServerAssignment } from "./types.js";
+import type { ServerAssignment } from './types.js';
 export declare class ManagerClient {
     private managerUrl;
     private debug;
