@@ -20,7 +20,8 @@ export class StorageManager {
    */
   async saveStorage(page: Page, profile: RoverFoxProfileData): Promise<void> {
     try {
-      let { localStorage, indexedDB, origin }: any = await this.exportStorage(page);
+      let { localStorage, indexedDB, origin }: any =
+        await this.exportStorage(page);
       let cookies = await page.context().cookies();
 
       const { error } = await this.supabaseClient.rpc(
@@ -31,7 +32,7 @@ export class StorageManager {
           p_local_storage: localStorage,
           p_indexed_db: indexedDB,
           p_cookies: cookies,
-        }
+        },
       );
 
       if (error) {
@@ -58,31 +59,69 @@ export class StorageManager {
    */
   async setFingerprintingProperties(
     page: Page,
-    profile: RoverFoxProfileData
+    profile: RoverFoxProfileData,
   ): Promise<void> {
-    let ipv4 = "";
-
     await page.mainFrame().evaluate(
       ({
         fontSpacingSeed,
-        ipv4,
+        audioFingerprintSeed,
+        screenDimensions,
+        geolocation,
+        timezone,
       }: {
         fontSpacingSeed: number;
-        ipv4: string | undefined;
+        audioFingerprintSeed: number | undefined;
+        screenDimensions:
+          | { width: number; height: number; colorDepth?: number }
+          | undefined;
+        geolocation: { lat: number; lon: number } | undefined;
+        timezone: string | undefined;
       }) => {
         try {
           let _window = window as typeof window & {
             setFontSpacingSeed: (seed: number) => void;
+            setAudioFingerprintSeed?: (seed: number) => void;
+            setScreenDimensions?: (width: number, height: number) => void;
+            setScreenColorDepth?: (depth: number) => void;
             setWebRTCIPv4: (ipv4: string) => void;
+            setGeolocation?: (lat: number, lon: number) => void;
+            setTimezone?: (timezone: string) => void;
           };
           _window.setFontSpacingSeed(fontSpacingSeed);
+
+          // WebRTC IP disabled for now (patch is disabled in Camoufox)
           _window.setWebRTCIPv4("");
+
+          if (audioFingerprintSeed && _window.setAudioFingerprintSeed) {
+            _window.setAudioFingerprintSeed(audioFingerprintSeed);
+          }
+
+          if (screenDimensions && _window.setScreenDimensions) {
+            _window.setScreenDimensions(
+              screenDimensions.width,
+              screenDimensions.height,
+            );
+            if (screenDimensions.colorDepth && _window.setScreenColorDepth) {
+              _window.setScreenColorDepth(screenDimensions.colorDepth);
+            }
+          }
+
+          if (geolocation && _window.setGeolocation) {
+            _window.setGeolocation(geolocation.lat, geolocation.lon);
+          }
+
+          if (timezone && _window.setTimezone) {
+            _window.setTimezone(timezone);
+          }
         } catch (e) {}
       },
       {
         fontSpacingSeed: profile.data.fontSpacingSeed,
-        ipv4,
-      }
+        audioFingerprintSeed: profile.data.audioFingerprintSeed,
+        screenDimensions: profile.data.screenDimensions,
+        geolocation: profile.data.geolocation,
+        timezone: profile.data.timezone,
+      },
     );
   }
 
@@ -98,7 +137,7 @@ export class StorageManager {
       `(async () => {
         ${this.scripts()}
         return { localStorage: await exportLocalStorage(), indexedDB: await exportIndexedDB() }
-      })()`
+      })()`,
     );
 
     let url = new URL(page.url());
@@ -121,7 +160,7 @@ export class StorageManager {
     const scriptsDir = candidates.find((p) => fs.existsSync(p));
     if (!scriptsDir) {
       throw new Error(
-        "Unable to locate scripts directory. Ensure src/scripts is copied to dist/scripts or available at runtime."
+        "Unable to locate scripts directory. Ensure src/scripts is copied to dist/scripts or available at runtime.",
       );
     }
     const files = fs.readdirSync(scriptsDir).filter((f) => f.endsWith(".js"));

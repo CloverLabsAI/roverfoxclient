@@ -15,6 +15,34 @@ import { ReplayManager } from "./replay-manager";
 import { StorageManager } from "./storage-manager";
 import { DataUsageTracker } from "./data-usage-tracker";
 import { formatProxyURL } from "./utils";
+import { IPGeolocationService, ProxyConfig } from "./ip-geolocation";
+
+// macOS-compatible screen resolutions for realistic fingerprinting
+const COMMON_SCREEN_RESOLUTIONS = [
+  { width: 1920, height: 1080 }, // External monitor (very common)
+  { width: 1440, height: 900 }, // 15" MacBook Pro default
+  { width: 2560, height: 1440 }, // External monitor QHD
+  { width: 1680, height: 1050 }, // Older MacBook Pro
+  { width: 2560, height: 1600 }, // 16" MacBook Pro
+  { width: 3024, height: 1964 }, // 14" MacBook Pro
+  { width: 2880, height: 1800 }, // 15" Retina MacBook Pro
+];
+
+function generateScreenDimensions(): {
+  width: number;
+  height: number;
+  colorDepth: number;
+} {
+  const resolution =
+    COMMON_SCREEN_RESOLUTIONS[
+      Math.floor(Math.random() * COMMON_SCREEN_RESOLUTIONS.length)
+    ];
+  return {
+    width: resolution.width,
+    height: resolution.height,
+    colorDepth: 24,
+  };
+}
 
 export class RoverfoxClient {
   private supabaseClient: SupabaseClient;
@@ -23,6 +51,7 @@ export class RoverfoxClient {
   private replayManager: ReplayManager;
   private storageManager: StorageManager;
   private dataUsageTrackers: Map<string, DataUsageTracker>;
+  private geoService: IPGeolocationService;
   private debug: boolean;
 
   constructor(
@@ -39,6 +68,7 @@ export class RoverfoxClient {
     this.replayManager = new ReplayManager(debug);
     this.storageManager = new StorageManager(supabaseClient);
     this.dataUsageTrackers = new Map();
+    this.geoService = new IPGeolocationService();
 
     // Set up streaming message handler
     this.connectionPool.setStreamingMessageHandler((message) => {
@@ -72,13 +102,15 @@ export class RoverfoxClient {
       throw new Error("Profile not found");
     }
 
-    // Fetch proxy data if needed
+    // Fetch proxy data from database
     const { data: proxyId } = await this.supabaseClient
       .from("accounts")
       .select("proxyId")
       .eq("browserId", browserId);
 
     let proxyObject: RoverfoxProxyObject = null;
+    let proxyConfig: ProxyConfig | null = null;
+
     if (proxyId) {
       const { data: proxyData } = await this.supabaseClient
         .from("proxies")
@@ -93,6 +125,44 @@ export class RoverfoxClient {
           username,
           password,
         };
+        proxyConfig = { host: entry, port, username, password };
+      }
+    }
+
+    // Get current exit IP and check if geolocation needs updating
+    // This handles both hostname proxies (gw.dataimpulse.com) and IP rotation
+    if (proxyConfig) {
+      const { changed, currentIP } = await this.geoService.hasIPChanged(
+        proxyConfig,
+        profile.data.lastKnownIP || null,
+      );
+
+      if (currentIP && (changed || !profile.data.timezone)) {
+        const geoData = await this.geoService.lookup(currentIP);
+        if (geoData) {
+          profile.data.timezone = geoData.timezone;
+          profile.data.geolocation = { lat: geoData.lat, lon: geoData.lon };
+          profile.data.countryCode = geoData.countryCode;
+          profile.data.lastKnownIP = currentIP;
+
+          // Persist to database
+          await this.supabaseClient
+            .from("redrover_profile_data")
+            .update({ data: profile.data })
+            .eq("browser_id", browserId);
+
+          if (this.debug) {
+            if (changed) {
+              console.log(
+                `IP changed for ${browserId}: ${profile.data.lastKnownIP} -> ${currentIP}, updated geolocation to ${geoData.timezone}`,
+              );
+            } else {
+              console.log(
+                `Geolocation set for ${browserId}: ${geoData.timezone}`,
+              );
+            }
+          }
+        }
       }
     }
 
@@ -129,6 +199,8 @@ export class RoverfoxClient {
         browser_id: browserId,
         data: {
           fontSpacingSeed: Math.floor(Math.random() * 100000000),
+          audioFingerprintSeed: Math.floor(Math.random() * 0xffffffff) + 1,
+          screenDimensions: generateScreenDimensions(),
           storageState: {
             cookies: [],
             origins: [],
@@ -297,13 +369,16 @@ export class RoverfoxClient {
    */
   async createProfile(
     proxyUrl: string,
-    proxyState: string | null,
+    proxyId: number,
+    geoState: string | null = null,
   ): Promise<RoverFoxProfileData> {
-    let browserId = uuidv4();
-    let profile: RoverFoxProfileData = {
+    const browserId = uuidv4();
+    const profile: RoverFoxProfileData = {
       browser_id: browserId,
       data: {
         fontSpacingSeed: Math.floor(Math.random() * 100000000),
+        audioFingerprintSeed: Math.floor(Math.random() * 0xffffffff) + 1,
+        screenDimensions: generateScreenDimensions(),
         storageState: {
           cookies: [],
           origins: [],
@@ -312,10 +387,52 @@ export class RoverfoxClient {
       },
     };
 
+    // Track detected geo for accounts table
+    let detectedLat: number | null = null;
+    let detectedLon: number | null = null;
+
+    // Get proxy credentials to lookup geolocation via actual exit IP
+    const { data: proxyData } = await this.supabaseClient
+      .from("proxies")
+      .select("entry, port, username, password")
+      .eq("id", proxyId)
+      .single();
+
+    if (proxyData) {
+      const proxyConfig: ProxyConfig = {
+        host: proxyData.entry,
+        port: proxyData.port,
+        username: proxyData.username,
+        password: proxyData.password,
+      };
+
+      // Get real exit IP through the proxy
+      const result = await this.geoService.lookupThroughProxy(proxyConfig);
+      if (result) {
+        profile.data.timezone = result.geo.timezone;
+        profile.data.geolocation = { lat: result.geo.lat, lon: result.geo.lon };
+        profile.data.countryCode = result.geo.countryCode;
+        profile.data.lastKnownIP = result.ip;
+
+        // Store for accounts table
+        detectedLat = result.geo.lat;
+        detectedLon = result.geo.lon;
+
+        if (this.debug) {
+          console.log(
+            `Profile ${browserId} created with IP ${result.ip}, timezone ${result.geo.timezone}`,
+          );
+        }
+      }
+    }
+
     await this.supabaseClient.from("accounts").insert({
       browserId: browserId,
       platform: "roverfox",
-      proxyState: proxyState,
+      proxyId: proxyId,
+      geo_state: geoState,
+      geo_latitude: detectedLat,
+      geo_longitude: detectedLon,
     });
 
     await this.supabaseClient.from("redrover_profile_data").insert(profile);
