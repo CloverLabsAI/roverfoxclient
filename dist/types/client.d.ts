@@ -48,6 +48,11 @@ export interface ProfileStorageData {
         height: number;
         colorDepth?: number;
     };
+    viewport?: {
+        width: number;
+        height: number;
+    };
+    devicePixelRatio?: number;
     timezone?: string;
     geolocation?: {
         lat: number;

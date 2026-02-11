@@ -22172,6 +22172,8 @@ class StorageManager {
      * Saves storage state to Manager
      */
     async saveStorage(page, profile) {
+        if (!this.managerClient)
+            return;
         try {
             const { localStorage, indexedDB, origin } = await this.exportStorage(page);
             const cookies = await page.context().cookies();
@@ -22199,12 +22201,12 @@ class StorageManager {
      * Sets fingerprinting properties on a page
      */
     async setFingerprintingProperties(page, profile) {
-        await page.mainFrame().evaluate(({ fontSpacingSeed, audioFingerprintSeed, screenDimensions, geolocation, timezone, }) => {
+        await page.mainFrame().evaluate(({ fontSpacingSeed, audioFingerprintSeed, screenDimensions, geolocation, timezone, lastKnownIP, }) => {
             try {
                 const _window = window;
                 _window.setFontSpacingSeed(fontSpacingSeed);
-                // WebRTC IP disabled for now (patch is disabled in Camoufox)
-                _window.setWebRTCIPv4('');
+                // Pass proxy exit IP for WebRTC spoofing (matches HTTP IP)
+                _window.setWebRTCIPv4(lastKnownIP || '');
                 if (audioFingerprintSeed && _window.setAudioFingerprintSeed) {
                     _window.setAudioFingerprintSeed(audioFingerprintSeed);
                 }
@@ -22228,6 +22230,7 @@ class StorageManager {
             screenDimensions: profile.data.screenDimensions,
             geolocation: profile.data.geolocation,
             timezone: profile.data.timezone,
+            lastKnownIP: profile.data.lastKnownIP,
         });
     }
     /**
@@ -82769,14 +82772,15 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
  * Connects to distributed Roverfox servers via manager
  */
 // macOS-compatible screen resolutions for realistic fingerprinting
+// High-res screens (2560+ width) are Retina with DPR 2.0
 const COMMON_SCREEN_RESOLUTIONS = [
-    { width: 1920, height: 1080 }, // External monitor (very common)
-    { width: 1440, height: 900 }, // 15" MacBook Pro default
-    { width: 2560, height: 1440 }, // External monitor QHD
-    { width: 1680, height: 1050 }, // Older MacBook Pro
-    { width: 2560, height: 1600 }, // 16" MacBook Pro
-    { width: 3024, height: 1964 }, // 14" MacBook Pro
-    { width: 2880, height: 1800 }, // 15" Retina MacBook Pro
+    { width: 1920, height: 1080, dpr: 1 }, // External monitor (very common)
+    { width: 1440, height: 900, dpr: 1 }, // 15" MacBook Pro default (scaled)
+    { width: 2560, height: 1440, dpr: 2 }, // External monitor QHD Retina
+    { width: 1680, height: 1050, dpr: 1 }, // Older MacBook Pro
+    { width: 2560, height: 1600, dpr: 2 }, // 16" MacBook Pro Retina
+    { width: 3024, height: 1964, dpr: 2 }, // 14" MacBook Pro Retina
+    { width: 2880, height: 1800, dpr: 2 }, // 15" Retina MacBook Pro
 ];
 function generateScreenDimensions() {
     const resolution = COMMON_SCREEN_RESOLUTIONS[Math.floor(Math.random() * COMMON_SCREEN_RESOLUTIONS.length)];
@@ -82784,7 +82788,20 @@ function generateScreenDimensions() {
         width: resolution.width,
         height: resolution.height,
         colorDepth: 24,
+        devicePixelRatio: resolution.dpr,
     };
+}
+// Backfill DPR on old profiles
+function getDevicePixelRatioForScreen(width) {
+    return width >= 2560 ? 2 : 1;
+}
+function generateViewport(screen) {
+    // Smaller viewport than screen -> Width: 70-90%, Height: 65-85%
+    const widthRatio = 0.7 + Math.random() * 0.2;
+    const heightRatio = 0.65 + Math.random() * 0.2;
+    const width = Math.round((screen.width * widthRatio) / 10) * 10;
+    const height = Math.round((screen.height * heightRatio) / 10) * 10;
+    return { width, height };
 }
 class RoverfoxClient {
     constructor(wsAPIKey, managerUrl, debug = false) {
@@ -82848,6 +82865,39 @@ class RoverfoxClient {
                 // Non-critical: continue without geolocation update
             }
         }
+        // Auto-generate missing fingerprint fields for old profiles
+        let profileUpdated = false;
+        if (!profile.data.audioFingerprintSeed) {
+            profile.data.audioFingerprintSeed =
+                Math.floor(Math.random() * 0xffffffff) + 1;
+            profileUpdated = true;
+        }
+        if (!profile.data.screenDimensions) {
+            profile.data.screenDimensions = generateScreenDimensions();
+            profileUpdated = true;
+        }
+        if (!profile.data.viewport) {
+            profile.data.viewport = generateViewport(profile.data.screenDimensions);
+            profileUpdated = true;
+        }
+        if (!profile.data.devicePixelRatio) {
+            // Prefer DPR from screenDimensions if available, else estimate from width
+            profile.data.devicePixelRatio =
+                profile.data.screenDimensions.devicePixelRatio ||
+                    getDevicePixelRatioForScreen(profile.data.screenDimensions.width);
+            profileUpdated = true;
+        }
+        if (profileUpdated) {
+            try {
+                await this.managerClient.updateProfileData(browserId, profile.data);
+                if (this.debug) {
+                    console.log(`[client] Backfilled missing fingerprint fields for ${browserId}`);
+                }
+            }
+            catch (_e) {
+                // Non-critical
+            }
+        }
         // Create browser context with profile data
         return this.launchInstance(browser, replayWs, profile, proxyObject, browserId);
     }
@@ -82863,12 +82913,15 @@ class RoverfoxClient {
         const replayWs = this.connectionPool.getReplayWebSocket(replayWsUrl);
         const proxyObject = proxyUrl ? formatProxyURL(proxyUrl) : null;
         const browserId = v4();
+        const screen = generateScreenDimensions();
         return this.launchInstance(browser, replayWs, {
             browser_id: browserId,
             data: {
                 fontSpacingSeed: Math.floor(Math.random() * 100000000),
                 audioFingerprintSeed: Math.floor(Math.random() * 0xffffffff) + 1,
-                screenDimensions: generateScreenDimensions(),
+                screenDimensions: screen,
+                viewport: generateViewport(screen),
+                devicePixelRatio: screen.devicePixelRatio,
                 storageState: {
                     cookies: [],
                     origins: [],
@@ -82957,14 +83010,26 @@ class RoverfoxClient {
         // Get or create connection to local server (no replay needed)
         const browser = await tempConnectionPool.getBrowserConnection(roverfoxWsUrl);
         const proxyObject = proxyUrl ? formatProxyURL(proxyUrl) : null;
-        v4();
+        const browserId = v4();
+        const screen = generateScreenDimensions();
+        const viewport = generateViewport(screen);
         const profile = {
+            browser_id: browserId,
             data: {
                 fontSpacingSeed: Math.floor(Math.random() * 100000000),
-                screenDimensions: generateScreenDimensions()},
+                audioFingerprintSeed: Math.floor(Math.random() * 0xffffffff) + 1,
+                screenDimensions: screen,
+                viewport,
+                devicePixelRatio: screen.devicePixelRatio,
+                storageState: {
+                    cookies: [],
+                    origins: [],
+                },
+                proxyUrl: proxyUrl || null,
+            },
         };
         // Create browser context without streaming
-        const context = await browser.newContext(Object.assign({ bypassCSP: false }, (proxyObject
+        const context = await browser.newContext(Object.assign({ bypassCSP: false, viewport, deviceScaleFactor: profile.data.devicePixelRatio || 1 }, (proxyObject
             ? {
                 proxy: {
                     server: proxyObject.server,
@@ -82974,16 +83039,9 @@ class RoverfoxClient {
             }
             : {})));
         // Set up page event handlers (fingerprinting only)
+        const storageManager = new StorageManager(null);
         context.on('page', async (page) => {
-            // Apply fingerprinting properties
-            await page.mainFrame().evaluate(({ fontSpacingSeed }) => {
-                try {
-                    const _window = window;
-                    _window.setFontSpacingSeed(fontSpacingSeed);
-                    _window.setWebRTCIPv4('');
-                }
-                catch (_e) { }
-            }, { fontSpacingSeed: profile.data.fontSpacingSeed });
+            await storageManager.setFingerprintingProperties(page, profile);
         });
         // Wrap context.close to handle cleanup
         const originalClose = context.close.bind(context);
@@ -83060,7 +83118,9 @@ class RoverfoxClient {
             storageStateToUse = Object.assign(Object.assign({}, storageStateToUse), { origins: storageStateToUse.origins.map((origin) => (Object.assign(Object.assign({}, origin), { indexedDB: [] }))) });
         }
         // Create browser context
-        const context = await browser.newContext(Object.assign(Object.assign(Object.assign({}, (storageStateToUse ? { storageState: storageStateToUse } : {})), { bypassCSP: false }), (proxyObject
+        const context = await browser.newContext(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, (storageStateToUse ? { storageState: storageStateToUse } : {})), { bypassCSP: false }), (profile.data.viewport ? { viewport: profile.data.viewport } : {})), (profile.data.devicePixelRatio
+            ? { deviceScaleFactor: profile.data.devicePixelRatio }
+            : {})), (proxyObject
             ? {
                 proxy: {
                     server: proxyObject.server,
@@ -83154,12 +83214,15 @@ class RoverfoxClient {
     // geoState: string | null = null
     ) {
         const browserId = v4();
+        const screen = generateScreenDimensions();
         const profile = {
             browser_id: browserId,
             data: {
                 fontSpacingSeed: Math.floor(Math.random() * 100000000),
                 audioFingerprintSeed: Math.floor(Math.random() * 0xffffffff) + 1,
-                screenDimensions: generateScreenDimensions(),
+                screenDimensions: screen,
+                viewport: generateViewport(screen),
+                devicePixelRatio: screen.devicePixelRatio,
                 storageState: {
                     cookies: [],
                     origins: [],

@@ -7,7 +7,7 @@ import type { RoverFoxProfileData } from './types/client.js';
 export declare class StorageManager {
     private managerClient;
     private scriptsCache;
-    constructor(managerClient: ManagerClient);
+    constructor(managerClient: ManagerClient | null);
     /**
      * Saves storage state to Manager
      */
