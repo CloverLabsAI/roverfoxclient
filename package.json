@@ -19,6 +19,7 @@
   "author": "",
   "description": "A browser automation client built on Playwright for Firefox",
   "dependencies": {
+    "@aws-sdk/client-cloudwatch": "^3.927.0",
     "@logtail/node": "^0.5.6",
     "@small-tech/auto-encrypt": "^4.3.0",
     "axios": "^1.11.0",

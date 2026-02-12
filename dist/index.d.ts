@@ -80,5 +80,5 @@ export declare class RoverfoxClient {
     getProfileData(browserId: string): Promise<any>;
 }
 export { RoverfoxClient as default };
-export type { GeoLocationData, ProxyConfig } from './ip-geolocation.js';
-export { getGeoService, IPGeolocationService } from './ip-geolocation.js';
+export type { GeoLocationData, ProxyConfig, } from '@roverfox/geolocation-service';
+export { getGeoService, IPGeolocationService, } from '@roverfox/geolocation-service';

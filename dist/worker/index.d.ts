@@ -6,13 +6,16 @@ export declare class RoverFoxProxyServer {
     private browserProxy;
     private authManager;
     private wsManager;
+    private capacityReporter;
     private isShuttingDown;
     private restartAttempts;
     private maxRestartAttempts;
     private readonly numBrowserServers;
     private serverId;
     private serverIp;
+    private instanceId;
     private metricsInterval;
+    private isDraining;
     constructor(config: ServerConfig);
     /**
      * Starts the proxy server
@@ -46,6 +49,10 @@ export declare class RoverFoxProxyServer {
      */
     private getSystemMemoryUsage;
     /**
+     * Sets the server to draining mode
+     */
+    setDraining(draining: boolean): void;
+    /**
      * Gets current server metrics using existing ReplayHub tracking
      */
     getMetrics(): Promise<{
@@ -67,7 +74,11 @@ export declare class RoverFoxProxyServer {
      */
     private getAuthHeaders;
     /**
-     * Registers server in database via manager API
+     * Initializes the capacity reporter for tracking WebSocket connections
+     */
+    private initializeCapacityReporter;
+    /**
+     * Registers server via manager API so manager can monitor
      */
     private registerServer;
     /**
