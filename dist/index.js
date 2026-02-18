@@ -49,30 +49,30 @@ function bind(fn, thisArg) {
 
 // utils is a library of generic helper functions non-specific to axios
 
-const {toString} = Object.prototype;
-const {getPrototypeOf} = Object;
-const {iterator, toStringTag} = Symbol;
+const { toString } = Object.prototype;
+const { getPrototypeOf } = Object;
+const { iterator, toStringTag } = Symbol;
 
-const kindOf = (cache => thing => {
-    const str = toString.call(thing);
-    return cache[str] || (cache[str] = str.slice(8, -1).toLowerCase());
+const kindOf = ((cache) => (thing) => {
+  const str = toString.call(thing);
+  return cache[str] || (cache[str] = str.slice(8, -1).toLowerCase());
 })(Object.create(null));
 
 const kindOfTest = (type) => {
   type = type.toLowerCase();
-  return (thing) => kindOf(thing) === type
+  return (thing) => kindOf(thing) === type;
 };
 
-const typeOfTest = type => thing => typeof thing === type;
+const typeOfTest = (type) => (thing) => typeof thing === type;
 
 /**
- * Determine if a value is an Array
+ * Determine if a value is a non-null object
  *
  * @param {Object} val The value to test
  *
  * @returns {boolean} True if value is an Array, otherwise false
  */
-const {isArray} = Array;
+const { isArray } = Array;
 
 /**
  * Determine if a value is undefined
@@ -81,7 +81,7 @@ const {isArray} = Array;
  *
  * @returns {boolean} True if the value is undefined, otherwise false
  */
-const isUndefined = typeOfTest('undefined');
+const isUndefined = typeOfTest("undefined");
 
 /**
  * Determine if a value is a Buffer
@@ -91,8 +91,14 @@ const isUndefined = typeOfTest('undefined');
  * @returns {boolean} True if value is a Buffer, otherwise false
  */
 function isBuffer(val) {
-  return val !== null && !isUndefined(val) && val.constructor !== null && !isUndefined(val.constructor)
-    && isFunction$2(val.constructor.isBuffer) && val.constructor.isBuffer(val);
+  return (
+    val !== null &&
+    !isUndefined(val) &&
+    val.constructor !== null &&
+    !isUndefined(val.constructor) &&
+    isFunction$2(val.constructor.isBuffer) &&
+    val.constructor.isBuffer(val)
+  );
 }
 
 /**
@@ -102,8 +108,7 @@ function isBuffer(val) {
  *
  * @returns {boolean} True if value is an ArrayBuffer, otherwise false
  */
-const isArrayBuffer$1 = kindOfTest('ArrayBuffer');
-
+const isArrayBuffer$1 = kindOfTest("ArrayBuffer");
 
 /**
  * Determine if a value is a view on an ArrayBuffer
@@ -114,10 +119,10 @@ const isArrayBuffer$1 = kindOfTest('ArrayBuffer');
  */
 function isArrayBufferView(val) {
   let result;
-  if ((typeof ArrayBuffer !== 'undefined') && (ArrayBuffer.isView)) {
+  if (typeof ArrayBuffer !== "undefined" && ArrayBuffer.isView) {
     result = ArrayBuffer.isView(val);
   } else {
-    result = (val) && (val.buffer) && (isArrayBuffer$1(val.buffer));
+    result = val && val.buffer && isArrayBuffer$1(val.buffer);
   }
   return result;
 }
@@ -129,7 +134,7 @@ function isArrayBufferView(val) {
  *
  * @returns {boolean} True if value is a String, otherwise false
  */
-const isString = typeOfTest('string');
+const isString = typeOfTest("string");
 
 /**
  * Determine if a value is a Function
@@ -137,7 +142,7 @@ const isString = typeOfTest('string');
  * @param {*} val The value to test
  * @returns {boolean} True if value is a Function, otherwise false
  */
-const isFunction$2 = typeOfTest('function');
+const isFunction$2 = typeOfTest("function");
 
 /**
  * Determine if a value is a Number
@@ -146,7 +151,7 @@ const isFunction$2 = typeOfTest('function');
  *
  * @returns {boolean} True if value is a Number, otherwise false
  */
-const isNumber = typeOfTest('number');
+const isNumber = typeOfTest("number");
 
 /**
  * Determine if a value is an Object
@@ -155,7 +160,7 @@ const isNumber = typeOfTest('number');
  *
  * @returns {boolean} True if value is an Object, otherwise false
  */
-const isObject = (thing) => thing !== null && typeof thing === 'object';
+const isObject = (thing) => thing !== null && typeof thing === "object";
 
 /**
  * Determine if a value is a Boolean
@@ -163,7 +168,7 @@ const isObject = (thing) => thing !== null && typeof thing === 'object';
  * @param {*} thing The value to test
  * @returns {boolean} True if value is a Boolean, otherwise false
  */
-const isBoolean = thing => thing === true || thing === false;
+const isBoolean = (thing) => thing === true || thing === false;
 
 /**
  * Determine if a value is a plain Object
@@ -173,12 +178,18 @@ const isBoolean = thing => thing === true || thing === false;
  * @returns {boolean} True if value is a plain Object, otherwise false
  */
 const isPlainObject$1 = (val) => {
-  if (kindOf(val) !== 'object') {
+  if (kindOf(val) !== "object") {
     return false;
   }
 
   const prototype = getPrototypeOf(val);
-  return (prototype === null || prototype === Object.prototype || Object.getPrototypeOf(prototype) === null) && !(toStringTag in val) && !(iterator in val);
+  return (
+    (prototype === null ||
+      prototype === Object.prototype ||
+      Object.getPrototypeOf(prototype) === null) &&
+    !(toStringTag in val) &&
+    !(iterator in val)
+  );
 };
 
 /**
@@ -195,7 +206,10 @@ const isEmptyObject = (val) => {
   }
 
   try {
-    return Object.keys(val).length === 0 && Object.getPrototypeOf(val) === Object.prototype;
+    return (
+      Object.keys(val).length === 0 &&
+      Object.getPrototypeOf(val) === Object.prototype
+    );
   } catch (e) {
     // Fallback for any other objects that might cause RangeError with Object.keys()
     return false;
@@ -209,7 +223,7 @@ const isEmptyObject = (val) => {
  *
  * @returns {boolean} True if value is a Date, otherwise false
  */
-const isDate = kindOfTest('Date');
+const isDate = kindOfTest("Date");
 
 /**
  * Determine if a value is a File
@@ -218,7 +232,7 @@ const isDate = kindOfTest('Date');
  *
  * @returns {boolean} True if value is a File, otherwise false
  */
-const isFile = kindOfTest('File');
+const isFile = kindOfTest("File");
 
 /**
  * Determine if a value is a Blob
@@ -227,7 +241,7 @@ const isFile = kindOfTest('File');
  *
  * @returns {boolean} True if value is a Blob, otherwise false
  */
-const isBlob = kindOfTest('Blob');
+const isBlob = kindOfTest("Blob");
 
 /**
  * Determine if a value is a FileList
@@ -236,7 +250,7 @@ const isBlob = kindOfTest('Blob');
  *
  * @returns {boolean} True if value is a File, otherwise false
  */
-const isFileList = kindOfTest('FileList');
+const isFileList = kindOfTest("FileList");
 
 /**
  * Determine if a value is a Stream
@@ -256,15 +270,16 @@ const isStream = (val) => isObject(val) && isFunction$2(val.pipe);
  */
 const isFormData = (thing) => {
   let kind;
-  return thing && (
-    (typeof FormData === 'function' && thing instanceof FormData) || (
-      isFunction$2(thing.append) && (
-        (kind = kindOf(thing)) === 'formdata' ||
-        // detect form-data instance
-        (kind === 'object' && isFunction$2(thing.toString) && thing.toString() === '[object FormData]')
-      )
-    )
-  )
+  return (
+    thing &&
+    ((typeof FormData === "function" && thing instanceof FormData) ||
+      (isFunction$2(thing.append) &&
+        ((kind = kindOf(thing)) === "formdata" ||
+          // detect form-data instance
+          (kind === "object" &&
+            isFunction$2(thing.toString) &&
+            thing.toString() === "[object FormData]"))))
+  );
 };
 
 /**
@@ -274,9 +289,14 @@ const isFormData = (thing) => {
  *
  * @returns {boolean} True if value is a URLSearchParams object, otherwise false
  */
-const isURLSearchParams = kindOfTest('URLSearchParams');
+const isURLSearchParams = kindOfTest("URLSearchParams");
 
-const [isReadableStream$1, isRequest, isResponse, isHeaders] = ['ReadableStream', 'Request', 'Response', 'Headers'].map(kindOfTest);
+const [isReadableStream$1, isRequest, isResponse, isHeaders] = [
+  "ReadableStream",
+  "Request",
+  "Response",
+  "Headers",
+].map(kindOfTest);
 
 /**
  * Trim excess whitespace off the beginning and end of a string
@@ -285,8 +305,8 @@ const [isReadableStream$1, isRequest, isResponse, isHeaders] = ['ReadableStream'
  *
  * @returns {String} The String freed of excess whitespace
  */
-const trim = (str) => str.trim ?
-  str.trim() : str.replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, '');
+const trim = (str) =>
+  str.trim ? str.trim() : str.replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, "");
 
 /**
  * Iterate over an Array or an Object invoking a function for each item.
@@ -304,9 +324,9 @@ const trim = (str) => str.trim ?
  * @param {Boolean} [options.allOwnKeys = false]
  * @returns {any}
  */
-function forEach(obj, fn, {allOwnKeys = false} = {}) {
+function forEach(obj, fn, { allOwnKeys = false } = {}) {
   // Don't bother if no value provided
-  if (obj === null || typeof obj === 'undefined') {
+  if (obj === null || typeof obj === "undefined") {
     return;
   }
 
@@ -314,7 +334,7 @@ function forEach(obj, fn, {allOwnKeys = false} = {}) {
   let l;
 
   // Force an array if not already something iterable
-  if (typeof obj !== 'object') {
+  if (typeof obj !== "object") {
     /*eslint no-param-reassign:0*/
     obj = [obj];
   }
@@ -331,7 +351,9 @@ function forEach(obj, fn, {allOwnKeys = false} = {}) {
     }
 
     // Iterate over object keys
-    const keys = allOwnKeys ? Object.getOwnPropertyNames(obj) : Object.keys(obj);
+    const keys = allOwnKeys
+      ? Object.getOwnPropertyNames(obj)
+      : Object.keys(obj);
     const len = keys.length;
     let key;
 
@@ -343,7 +365,7 @@ function forEach(obj, fn, {allOwnKeys = false} = {}) {
 }
 
 function findKey(obj, key) {
-  if (isBuffer(obj)){
+  if (isBuffer(obj)) {
     return null;
   }
 
@@ -363,10 +385,15 @@ function findKey(obj, key) {
 const _global = (() => {
   /*eslint no-undef:0*/
   if (typeof globalThis !== "undefined") return globalThis;
-  return typeof self !== "undefined" ? self : (typeof window !== 'undefined' ? window : global)
+  return typeof self !== "undefined"
+    ? self
+    : typeof window !== "undefined"
+      ? window
+      : global;
 })();
 
-const isContextDefined = (context) => !isUndefined(context) && context !== _global;
+const isContextDefined = (context) =>
+  !isUndefined(context) && context !== _global;
 
 /**
  * Accepts varargs expecting each argument to be an object, then
@@ -387,10 +414,15 @@ const isContextDefined = (context) => !isUndefined(context) && context !== _glob
  * @returns {Object} Result of all merge properties
  */
 function merge(/* obj1, obj2, obj3, ... */) {
-  const {caseless, skipUndefined} = isContextDefined(this) && this || {};
+  const { caseless, skipUndefined } = (isContextDefined(this) && this) || {};
   const result = {};
   const assignValue = (val, key) => {
-    const targetKey = caseless && findKey(result, key) || key;
+    // Skip dangerous property names to prevent prototype pollution
+    if (key === "__proto__" || key === "constructor" || key === "prototype") {
+      return;
+    }
+
+    const targetKey = (caseless && findKey(result, key)) || key;
     if (isPlainObject$1(result[targetKey]) && isPlainObject$1(val)) {
       result[targetKey] = merge(result[targetKey], val);
     } else if (isPlainObject$1(val)) {
@@ -419,24 +451,28 @@ function merge(/* obj1, obj2, obj3, ... */) {
  * @param {Boolean} [options.allOwnKeys]
  * @returns {Object} The resulting value of object a
  */
-const extend = (a, b, thisArg, {allOwnKeys}= {}) => {
-  forEach(b, (val, key) => {
-    if (thisArg && isFunction$2(val)) {
-      Object.defineProperty(a, key, {
-        value: bind(val, thisArg),
-        writable: true,
-        enumerable: true,
-        configurable: true
-      });
-    } else {
-      Object.defineProperty(a, key, {
-        value: val,
-        writable: true,
-        enumerable: true,
-        configurable: true
-      });
-    }
-  }, {allOwnKeys});
+const extend = (a, b, thisArg, { allOwnKeys } = {}) => {
+  forEach(
+    b,
+    (val, key) => {
+      if (thisArg && isFunction$2(val)) {
+        Object.defineProperty(a, key, {
+          value: bind(val, thisArg),
+          writable: true,
+          enumerable: true,
+          configurable: true,
+        });
+      } else {
+        Object.defineProperty(a, key, {
+          value: val,
+          writable: true,
+          enumerable: true,
+          configurable: true,
+        });
+      }
+    },
+    { allOwnKeys },
+  );
   return a;
 };
 
@@ -448,7 +484,7 @@ const extend = (a, b, thisArg, {allOwnKeys}= {}) => {
  * @returns {string} content value without BOM
  */
 const stripBOM = (content) => {
-  if (content.charCodeAt(0) === 0xFEFF) {
+  if (content.charCodeAt(0) === 0xfeff) {
     content = content.slice(1);
   }
   return content;
@@ -464,15 +500,18 @@ const stripBOM = (content) => {
  * @returns {void}
  */
 const inherits$1 = (constructor, superConstructor, props, descriptors) => {
-  constructor.prototype = Object.create(superConstructor.prototype, descriptors);
-  Object.defineProperty(constructor.prototype, 'constructor', {
+  constructor.prototype = Object.create(
+    superConstructor.prototype,
+    descriptors,
+  );
+  Object.defineProperty(constructor.prototype, "constructor", {
     value: constructor,
     writable: true,
     enumerable: false,
-    configurable: true
+    configurable: true,
   });
-  Object.defineProperty(constructor, 'super', {
-    value: superConstructor.prototype
+  Object.defineProperty(constructor, "super", {
+    value: superConstructor.prototype,
   });
   props && Object.assign(constructor.prototype, props);
 };
@@ -501,13 +540,20 @@ const toFlatObject = (sourceObj, destObj, filter, propFilter) => {
     i = props.length;
     while (i-- > 0) {
       prop = props[i];
-      if ((!propFilter || propFilter(prop, sourceObj, destObj)) && !merged[prop]) {
+      if (
+        (!propFilter || propFilter(prop, sourceObj, destObj)) &&
+        !merged[prop]
+      ) {
         destObj[prop] = sourceObj[prop];
         merged[prop] = true;
       }
     }
     sourceObj = filter !== false && getPrototypeOf(sourceObj);
-  } while (sourceObj && (!filter || filter(sourceObj, destObj)) && sourceObj !== Object.prototype);
+  } while (
+    sourceObj &&
+    (!filter || filter(sourceObj, destObj)) &&
+    sourceObj !== Object.prototype
+  );
 
   return destObj;
 };
@@ -530,7 +576,6 @@ const endsWith = (str, searchString, position) => {
   const lastIndex = str.indexOf(searchString, position);
   return lastIndex !== -1 && lastIndex === position;
 };
-
 
 /**
  * Returns new array from array like object or null if failed
@@ -560,12 +605,12 @@ const toArray$1 = (thing) => {
  * @returns {Array}
  */
 // eslint-disable-next-line func-names
-const isTypedArray = (TypedArray => {
+const isTypedArray = ((TypedArray) => {
   // eslint-disable-next-line func-names
-  return thing => {
+  return (thing) => {
     return TypedArray && thing instanceof TypedArray;
   };
-})(typeof Uint8Array !== 'undefined' && getPrototypeOf(Uint8Array));
+})(typeof Uint8Array !== "undefined" && getPrototypeOf(Uint8Array));
 
 /**
  * For each entry in the object, call the function with the key and value.
@@ -608,18 +653,22 @@ const matchAll = (regExp, str) => {
 };
 
 /* Checking if the kindOfTest function returns true when passed an HTMLFormElement. */
-const isHTMLForm = kindOfTest('HTMLFormElement');
+const isHTMLForm = kindOfTest("HTMLFormElement");
 
-const toCamelCase = str => {
-  return str.toLowerCase().replace(/[-_\s]([a-z\d])(\w*)/g,
-    function replacer(m, p1, p2) {
+const toCamelCase = (str) => {
+  return str
+    .toLowerCase()
+    .replace(/[-_\s]([a-z\d])(\w*)/g, function replacer(m, p1, p2) {
       return p1.toUpperCase() + p2;
-    }
-  );
+    });
 };
 
 /* Creating a function that will check if an object has a property. */
-const hasOwnProperty = (({hasOwnProperty}) => (obj, prop) => hasOwnProperty.call(obj, prop))(Object.prototype);
+const hasOwnProperty = (
+  ({ hasOwnProperty }) =>
+  (obj, prop) =>
+    hasOwnProperty.call(obj, prop)
+)(Object.prototype);
 
 /**
  * Determine if a value is a RegExp object
@@ -628,7 +677,7 @@ const hasOwnProperty = (({hasOwnProperty}) => (obj, prop) => hasOwnProperty.call
  *
  * @returns {boolean} True if value is a RegExp object, otherwise false
  */
-const isRegExp = kindOfTest('RegExp');
+const isRegExp = kindOfTest("RegExp");
 
 const reduceDescriptors = (obj, reducer) => {
   const descriptors = Object.getOwnPropertyDescriptors(obj);
@@ -652,7 +701,10 @@ const reduceDescriptors = (obj, reducer) => {
 const freezeMethods = (obj) => {
   reduceDescriptors(obj, (descriptor, name) => {
     // skip restricted props in strict mode
-    if (isFunction$2(obj) && ['arguments', 'caller', 'callee'].indexOf(name) !== -1) {
+    if (
+      isFunction$2(obj) &&
+      ["arguments", "caller", "callee"].indexOf(name) !== -1
+    ) {
       return false;
     }
 
@@ -662,14 +714,14 @@ const freezeMethods = (obj) => {
 
     descriptor.enumerable = false;
 
-    if ('writable' in descriptor) {
+    if ("writable" in descriptor) {
       descriptor.writable = false;
       return;
     }
 
     if (!descriptor.set) {
       descriptor.set = () => {
-        throw Error('Can not rewrite read-only method \'' + name + '\'');
+        throw Error("Can not rewrite read-only method '" + name + "'");
       };
     }
   });
@@ -679,12 +731,14 @@ const toObjectSet = (arrayOrString, delimiter) => {
   const obj = {};
 
   const define = (arr) => {
-    arr.forEach(value => {
+    arr.forEach((value) => {
       obj[value] = true;
     });
   };
 
-  isArray(arrayOrString) ? define(arrayOrString) : define(String(arrayOrString).split(delimiter));
+  isArray(arrayOrString)
+    ? define(arrayOrString)
+    : define(String(arrayOrString).split(delimiter));
 
   return obj;
 };
@@ -692,10 +746,10 @@ const toObjectSet = (arrayOrString, delimiter) => {
 const noop$2 = () => {};
 
 const toFiniteNumber = (value, defaultValue) => {
-  return value != null && Number.isFinite(value = +value) ? value : defaultValue;
+  return value != null && Number.isFinite((value = +value))
+    ? value
+    : defaultValue;
 };
-
-
 
 /**
  * If the thing is a FormData object, return true, otherwise return false.
@@ -705,14 +759,18 @@ const toFiniteNumber = (value, defaultValue) => {
  * @returns {boolean}
  */
 function isSpecCompliantForm(thing) {
-  return !!(thing && isFunction$2(thing.append) && thing[toStringTag] === 'FormData' && thing[iterator]);
+  return !!(
+    thing &&
+    isFunction$2(thing.append) &&
+    thing[toStringTag] === "FormData" &&
+    thing[iterator]
+  );
 }
 
 const toJSONObject = (obj) => {
   const stack = new Array(10);
 
   const visit = (source, i) => {
-
     if (isObject(source)) {
       if (stack.indexOf(source) >= 0) {
         return;
@@ -723,7 +781,7 @@ const toJSONObject = (obj) => {
         return source;
       }
 
-      if(!('toJSON' in source)) {
+      if (!("toJSON" in source)) {
         stack[i] = source;
         const target = isArray(source) ? [] : {};
 
@@ -744,10 +802,13 @@ const toJSONObject = (obj) => {
   return visit(obj, 0);
 };
 
-const isAsyncFn = kindOfTest('AsyncFunction');
+const isAsyncFn = kindOfTest("AsyncFunction");
 
 const isThenable = (thing) =>
-  thing && (isObject(thing) || isFunction$2(thing)) && isFunction$2(thing.then) && isFunction$2(thing.catch);
+  thing &&
+  (isObject(thing) || isFunction$2(thing)) &&
+  isFunction$2(thing.then) &&
+  isFunction$2(thing.catch);
 
 // original code
 // https://github.com/DigitalBrainJS/AxiosPromise/blob/16deab13710ec09779922131f3fa5954320f83ab/lib/utils.js#L11-L34
@@ -757,31 +818,34 @@ const _setImmediate = ((setImmediateSupported, postMessageSupported) => {
     return setImmediate;
   }
 
-  return postMessageSupported ? ((token, callbacks) => {
-    _global.addEventListener("message", ({source, data}) => {
-      if (source === _global && data === token) {
-        callbacks.length && callbacks.shift()();
-      }
-    }, false);
+  return postMessageSupported
+    ? ((token, callbacks) => {
+        _global.addEventListener(
+          "message",
+          ({ source, data }) => {
+            if (source === _global && data === token) {
+              callbacks.length && callbacks.shift()();
+            }
+          },
+          false,
+        );
 
-    return (cb) => {
-      callbacks.push(cb);
-      _global.postMessage(token, "*");
-    }
-  })(`axios@${Math.random()}`, []) : (cb) => setTimeout(cb);
-})(
-  typeof setImmediate === 'function',
-  isFunction$2(_global.postMessage)
-);
+        return (cb) => {
+          callbacks.push(cb);
+          _global.postMessage(token, "*");
+        };
+      })(`axios@${Math.random()}`, [])
+    : (cb) => setTimeout(cb);
+})(typeof setImmediate === "function", isFunction$2(_global.postMessage));
 
-const asap = typeof queueMicrotask !== 'undefined' ?
-  queueMicrotask.bind(_global) : ( typeof process !== 'undefined' && process.nextTick || _setImmediate);
+const asap =
+  typeof queueMicrotask !== "undefined"
+    ? queueMicrotask.bind(_global)
+    : (typeof process !== "undefined" && process.nextTick) || _setImmediate;
 
 // *********************
 
-
 const isIterable = (thing) => thing != null && isFunction$2(thing[iterator]);
-
 
 var utils$2 = {
   isArray,
@@ -840,7 +904,7 @@ var utils$2 = {
   isThenable,
   setImmediate: _setImmediate,
   asap,
-  isIterable
+  isIterable,
 };
 
 let AxiosError$1 = class AxiosError extends Error {
@@ -14631,7 +14695,8 @@ class InterceptorManager {
 var transitionalDefaults = {
   silentJSONParsing: true,
   forcedJSONParsing: true,
-  clarifyTimeoutError: false
+  clarifyTimeoutError: false,
+  legacyInterceptorReqResOrdering: true
 };
 
 var URLSearchParams$1 = require$$0$3.URLSearchParams;
@@ -15422,6 +15487,10 @@ function isAbsoluteURL(url) {
   // A URL is considered absolute if it begins with "<scheme>://" or "//" (protocol-relative URL).
   // RFC 3986 defines scheme name as a sequence of characters beginning with a letter and followed
   // by any combination of letters, digits, plus, period, or hyphen.
+  if (typeof url !== 'string') {
+    return false;
+  }
+
   return /^([a-z][a-z\d+\-.]*:)?\/\//i.test(url);
 }
 
@@ -17509,7 +17578,7 @@ function requireFollowRedirects () {
 var followRedirectsExports = requireFollowRedirects();
 var followRedirects = /*@__PURE__*/getDefaultExportFromCjs(followRedirectsExports);
 
-const VERSION$1 = "1.13.4";
+const VERSION$1 = "1.13.5";
 
 function parseProtocol(url) {
   const match = /^([-+\w]{1,25})(:?\/\/|:)/.exec(url);
@@ -18996,7 +19065,8 @@ var cookies = platform.hasStandardBrowserEnv ?
     remove() {}
   };
 
-const headersToObject = (thing) => thing instanceof AxiosHeaders$1 ? { ...thing } : thing;
+const headersToObject = (thing) =>
+  thing instanceof AxiosHeaders$1 ? { ...thing } : thing;
 
 /**
  * Config-specific merge-function which creates a new config-object
@@ -19085,14 +19155,27 @@ function mergeConfig$1(config1, config2) {
     socketPath: defaultToConfig2,
     responseEncoding: defaultToConfig2,
     validateStatus: mergeDirectKeys,
-    headers: (a, b, prop) => mergeDeepProperties(headersToObject(a), headersToObject(b), prop, true)
+    headers: (a, b, prop) =>
+      mergeDeepProperties(headersToObject(a), headersToObject(b), prop, true),
   };
 
-  utils$2.forEach(Object.keys({ ...config1, ...config2 }), function computeConfigValue(prop) {
-    const merge = mergeMap[prop] || mergeDeepProperties;
-    const configValue = merge(config1[prop], config2[prop], prop);
-    (utils$2.isUndefined(configValue) && merge !== mergeDirectKeys) || (config[prop] = configValue);
-  });
+  utils$2.forEach(
+    Object.keys({ ...config1, ...config2 }),
+    function computeConfigValue(prop) {
+      if (
+        prop === "__proto__" ||
+        prop === "constructor" ||
+        prop === "prototype"
+      )
+        return;
+      const merge = utils$2.hasOwnProp(mergeMap, prop)
+        ? mergeMap[prop]
+        : mergeDeepProperties;
+      const configValue = merge(config1[prop], config2[prop], prop);
+      (utils$2.isUndefined(configValue) && merge !== mergeDirectKeys) ||
+        (config[prop] = configValue);
+    },
+  );
 
   return config;
 }
@@ -19708,14 +19791,14 @@ const factory = (env) => {
 
       if (err && err.name === 'TypeError' && /Load failed|fetch/i.test(err.message)) {
         throw Object.assign(
-          new AxiosError$1('Network Error', AxiosError$1.ERR_NETWORK, config, request),
+          new AxiosError$1('Network Error', AxiosError$1.ERR_NETWORK, config, request, err && err.response),
           {
             cause: err.cause || err
           }
         )
       }
 
-      throw AxiosError$1.from(err, err && err.code, config, request);
+      throw AxiosError$1.from(err, err && err.code, config, request, err && err.response);
     }
   }
 };
@@ -20106,7 +20189,8 @@ let Axios$1 = class Axios {
       validator.assertOptions(transitional, {
         silentJSONParsing: validators.transitional(validators.boolean),
         forcedJSONParsing: validators.transitional(validators.boolean),
-        clarifyTimeoutError: validators.transitional(validators.boolean)
+        clarifyTimeoutError: validators.transitional(validators.boolean),
+        legacyInterceptorReqResOrdering: validators.transitional(validators.boolean)
       }, false);
     }
 
@@ -20163,7 +20247,14 @@ let Axios$1 = class Axios {
 
       synchronousRequestInterceptors = synchronousRequestInterceptors && interceptor.synchronous;
 
-      requestInterceptorChain.unshift(interceptor.fulfilled, interceptor.rejected);
+      const transitional = config.transitional || transitionalDefaults;
+      const legacyInterceptorReqResOrdering = transitional && transitional.legacyInterceptorReqResOrdering;
+
+      if (legacyInterceptorReqResOrdering) {
+        requestInterceptorChain.unshift(interceptor.fulfilled, interceptor.rejected);
+      } else {
+        requestInterceptorChain.push(interceptor.fulfilled, interceptor.rejected);
+      }
     });
 
     const responseInterceptorChain = [];
@@ -21660,9 +21751,17 @@ class ManagerClient {
     /**
      * Gets server assignment from manager
      */
-    async getServerAssignment() {
+    async getServerAssignment(options) {
+        const opts = Object.assign({ 
+            // Default options
+            platform: 'mac' }, options);
         try {
-            const { data: assignment } = await axios.get(`${this.managerUrl}/api/assign-server`);
+            const params = new URLSearchParams();
+            if (opts.browserId)
+                params.append('browserId', opts.browserId);
+            if (opts.platform)
+                params.append('platform', opts.platform);
+            const { data: assignment } = await axios.get(`${this.managerUrl}/api/assign-server`, { params });
             if (this.debug)
                 console.log(`[client] Assigned to server ${assignment.serverIp}`);
             return assignment;
@@ -21704,12 +21803,13 @@ class ManagerClient {
     /**
      * Creates a new profile via manager
      */
-    async createProfile(browserId, profileData, proxyId) {
+    async createProfile(browserId, profileData, proxyId, platform) {
         try {
             await axios.post(`${this.managerUrl}/api/profiles`, {
                 browserId,
                 profileData,
                 proxyId,
+                platform,
             });
         }
         catch (error) {
@@ -21779,13 +21879,14 @@ class ManagerClient {
     /**
      * Logs data usage via manager
      */
-    async logUsage(browserId, start, end, bytes) {
+    async logUsage(browserId, start, end, bytes, isOneTime = false) {
         try {
             await axios.post(`${this.managerUrl}/api/usage`, {
                 browserId,
                 start,
                 end,
                 bytes,
+                isOneTime,
             });
         }
         catch (error) {
@@ -81430,7 +81531,15 @@ class CamoufoxSetup {
     async init() {
         const zipFileName = this.getZipFileName();
         const zipFolderName = zipFileName.replace('.zip', '');
-        const cacheDir = path__default.join(os.homedir(), 'Library', 'Caches');
+        let cacheDir = process.env.XDG_CACHE_HOME;
+        if (!cacheDir) {
+            if (process.platform === 'darwin') {
+                cacheDir = path__default.join(os.homedir(), 'Library', 'Caches');
+            }
+            else {
+                cacheDir = path__default.join(os.homedir(), '.cache');
+            }
+        }
         if (!fs__default.existsSync(cacheDir)) {
             fs__default.mkdirSync(cacheDir, { recursive: true });
         }
@@ -91620,7 +91729,7 @@ const commonParams$4 = {
     UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
 };
 
-var version$6 = "3.981.0";
+var version$6 = "3.986.0";
 var packageInfo$2 = {
 	version: version$6};
 
@@ -96300,7 +96409,9 @@ class RoverfoxClient {
      */
     async launchProfile(browserId) {
         // Get server assignment from manager
-        const assignment = await this.managerClient.getServerAssignment();
+        const assignment = await this.managerClient.getServerAssignment({
+            browserId,
+        });
         const { roverfoxWsUrl, replayWsUrl } = assignment;
         // Get or create browser connection (reuses if already connected)
         const browser = await this.connectionPool.getBrowserConnection(roverfoxWsUrl);
@@ -96382,9 +96493,11 @@ class RoverfoxClient {
     /**
      * Launch a one-time browser without profile
      */
-    async launchOneTimeBrowser(proxyUrl) {
+    async launchOneTimeBrowser(proxyUrl, options) {
         // Get server assignment from manager
-        const assignment = await this.managerClient.getServerAssignment();
+        const assignment = await this.managerClient.getServerAssignment({
+            platform: options === null || options === void 0 ? void 0 : options.platform,
+        });
         const { roverfoxWsUrl, replayWsUrl } = assignment;
         // Get or create connections
         const browser = await this.connectionPool.getBrowserConnection(roverfoxWsUrl);
@@ -96392,7 +96505,7 @@ class RoverfoxClient {
         const proxyObject = proxyUrl ? formatProxyURL(proxyUrl) : null;
         const browserId = v4$1();
         const screen = generateScreenDimensions();
-        return this.launchInstance(browser, replayWs, {
+        const context = await this.launchInstance(browser, replayWs, {
             browser_id: browserId,
             data: {
                 fontSpacingSeed: Math.floor(Math.random() * 100000000),
@@ -96408,6 +96521,10 @@ class RoverfoxClient {
             },
         }, proxyObject, browserId, true // skipAudit
         );
+        // Close as one time context
+        const closeContext = context.close.bind(context);
+        context.close = (options) => closeContext(Object.assign(Object.assign({}, options), { isOneTime: true }));
+        return context;
     }
     /**
      * Check if a port is in use
@@ -96523,8 +96640,8 @@ class RoverfoxClient {
         });
         // Wrap context.close to handle cleanup
         const originalClose = context.close.bind(context);
-        context.close = async () => {
-            await originalClose();
+        context.close = async (options) => {
+            await originalClose(options);
             // Note: Browser and server are shared across processes
             // Don't close them here - they'll persist for reuse
         };
@@ -96572,17 +96689,6 @@ class RoverfoxClient {
             roverfoxWsUrl: `ws://localhost:${RoverfoxClient.localPort}${config.proxyPath}`,
             replayWsUrl: '', // Not used for local contexts
         };
-    }
-    /**
-     * Shuts down the local roverfox server
-     */
-    static async shutdownLocalServer() {
-        if (!RoverfoxClient.localServer) {
-            return;
-        }
-        await RoverfoxClient.localServer.shutdown();
-        RoverfoxClient.localServer = null;
-        RoverfoxClient.localServerConfig = null;
     }
     /**
      * Internal method to launch instance with profile data
@@ -96636,7 +96742,8 @@ class RoverfoxClient {
         });
         // Wrap context.close to clean up replay resources
         const closeContext = context.close.bind(context);
-        context.close = async () => {
+        context.close = async (options) => {
+            var _a;
             if (!skipAudit)
                 await this.managerClient.logAudit(browserId, 'closeContext', {});
             // Save data usage to database and BetterStack
@@ -96646,7 +96753,7 @@ class RoverfoxClient {
                 const durationMs = new Date(usageData.timeEnd).getTime() -
                     new Date(usageData.timeStart).getTime();
                 // Save to Manager API
-                await this.managerClient.logUsage(usageData.browserId, usageData.timeStart, usageData.timeEnd, usageData.bytes);
+                await this.managerClient.logUsage(usageData.browserId, usageData.timeStart, usageData.timeEnd, usageData.bytes, (_a = options === null || options === void 0 ? void 0 : options.isOneTime) !== null && _a !== void 0 ? _a : false);
                 // Send to BetterStack
                 logDataUsage({
                     browserId: usageData.browserId,
@@ -96677,7 +96784,7 @@ class RoverfoxClient {
             catch (_error) {
                 // Silently ignore close errors
             }
-            await closeContext();
+            await closeContext(options);
             // Close browser if no more contexts
             if (browser.contexts().length === 0) {
                 browser.close();
@@ -96688,7 +96795,7 @@ class RoverfoxClient {
     /**
      * Creates a new profile
      */
-    async createProfile(proxyUrl, proxyId
+    async createProfile(proxyUrl, proxyId, options
     // geoState: string | null = null
     ) {
         const browserId = v4$1();
@@ -96731,7 +96838,7 @@ class RoverfoxClient {
         catch (_e) {
             // Non-critical: continue without geolocation
         }
-        await this.managerClient.createProfile(browserId, profile.data, proxyId);
+        await this.managerClient.createProfile(browserId, profile.data, proxyId, options === null || options === void 0 ? void 0 : options.platform);
         return profile;
     }
     /**
@@ -100284,7 +100391,7 @@ class WebSocketFactory {
 // - Debugging and support (identifying which version is running)
 // - Telemetry and logging (version reporting in errors/analytics)
 // - Ensuring build artifacts match the published package version
-const version$5 = '2.94.0';
+const version$5 = '2.95.3';
 
 const DEFAULT_VERSION = `realtime-js/${version$5}`;
 const VSN_1_0_0 = '1.0.0';
@@ -101915,6 +102022,10 @@ class RealtimeClient {
      */
     async removeChannel(channel) {
         const status = await channel.unsubscribe();
+        // Only remove from channels list if unsubscribe was successful
+        if (status === 'ok') {
+            this._remove(channel);
+        }
         if (this.channels.length === 0) {
             this.disconnect();
         }
@@ -103987,6 +104098,7 @@ var StorageFileApi = class extends BaseApiClient {
 	* @category File Buckets
 	* @param path The full path and file name of the file to be downloaded. For example `folder/image.png`.
 	* @param options.transform Transform the asset before serving it to the client.
+	* @param parameters Additional fetch parameters like signal for cancellation. Supports standard fetch options including cache control.
 	* @returns BlobDownloadBuilder instance for downloading the file
 	*
 	* @example Download file
@@ -104018,8 +104130,27 @@ var StorageFileApi = class extends BaseApiClient {
 	*     }
 	*   })
 	* ```
+	*
+	* @example Download with cache control (useful in Edge Functions)
+	* ```js
+	* const { data, error } = await supabase
+	*   .storage
+	*   .from('avatars')
+	*   .download('folder/avatar1.png', {}, { cache: 'no-store' })
+	* ```
+	*
+	* @example Download with abort signal
+	* ```js
+	* const controller = new AbortController()
+	* setTimeout(() => controller.abort(), 5000)
+	*
+	* const { data, error } = await supabase
+	*   .storage
+	*   .from('avatars')
+	*   .download('folder/avatar1.png', {}, { signal: controller.signal })
+	* ```
 	*/
-	download(path, options) {
+	download(path, options, parameters) {
 		const renderPath = typeof (options === null || options === void 0 ? void 0 : options.transform) !== "undefined" ? "render/image/authenticated" : "object";
 		const transformationQuery = this.transformOptsToQueryString((options === null || options === void 0 ? void 0 : options.transform) || {});
 		const queryString = transformationQuery ? `?${transformationQuery}` : "";
@@ -104027,7 +104158,7 @@ var StorageFileApi = class extends BaseApiClient {
 		const downloadFn = () => get(this.fetch, `${this.url}/${renderPath}/${_path}${queryString}`, {
 			headers: this.headers,
 			noResolveJson: true
-		});
+		}, parameters);
 		return new BlobDownloadBuilder(downloadFn, this.shouldThrowOnError);
 	}
 	/**
@@ -104294,7 +104425,7 @@ var StorageFileApi = class extends BaseApiClient {
 
 //#endregion
 //#region src/lib/version.ts
-const version$4 = "2.94.0";
+const version$4 = "2.95.3";
 
 //#endregion
 //#region src/lib/constants.ts
@@ -105647,7 +105778,7 @@ var StorageClient = class extends StorageBucketApi {
 // - Debugging and support (identifying which version is running)
 // - Telemetry and logging (version reporting in errors/analytics)
 // - Ensuring build artifacts match the published package version
-const version$3 = '2.94.0';
+const version$3 = '2.95.3';
 
 /** Current session will be checked for refresh at this interval. */
 const AUTO_REFRESH_TICK_DURATION_MS = 30 * 1000;
@@ -110958,7 +111089,7 @@ class GoTrueClient {
      * Only relevant when the OAuth 2.1 server is enabled in Supabase Auth.
      *
      * Returns authorization details including client info, scopes, and user information.
-     * If the API returns a redirect_uri, it means consent was already given - the caller
+     * If the response includes only a redirect_url field, it means consent was already given - the caller
      * should handle the redirect manually if needed.
      */
     async _getAuthorizationDetails(authorizationId) {
@@ -111235,7 +111366,7 @@ const AuthAdminApi = GoTrueAdminApi;
 const AuthClient = GoTrueClient;
 
 //#region src/lib/version.ts
-const version$2 = "2.94.0";
+const version$2 = "2.95.3";
 
 //#endregion
 //#region src/lib/constants.ts
@@ -111742,7 +111873,7 @@ const commonParams$3 = {
     UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
 };
 
-var version$1 = "3.982.0";
+var version$1 = "3.985.0";
 var packageInfo$1 = {
 	version: version$1};
 
@@ -112716,7 +112847,7 @@ const commonParams$2 = {
     UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
 };
 
-var version = "3.982.0";
+var version = "3.985.0";
 var packageInfo = {
 	version: version};
 

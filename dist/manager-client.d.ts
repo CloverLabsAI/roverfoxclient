@@ -1,7 +1,7 @@
 /**
  * Client for communicating with Roverfox Manager
  */
-import type { ServerAssignment } from './types.js';
+import type { Platform, ServerAssignment, ServerAssignmentOptions } from './types.js';
 export declare class ManagerClient {
     private managerUrl;
     private debug;
@@ -9,7 +9,7 @@ export declare class ManagerClient {
     /**
      * Gets server assignment from manager
      */
-    getServerAssignment(): Promise<ServerAssignment>;
+    getServerAssignment(options?: ServerAssignmentOptions): Promise<ServerAssignment>;
     /**
      * Lists all profiles via manager
      */
@@ -24,7 +24,7 @@ export declare class ManagerClient {
     /**
      * Creates a new profile via manager
      */
-    createProfile(browserId: string, profileData: any, proxyId: number): Promise<void>;
+    createProfile(browserId: string, profileData: any, proxyId: number, platform?: Platform): Promise<void>;
     /**
      * Updates profile data via manager
      */
@@ -44,5 +44,5 @@ export declare class ManagerClient {
     /**
      * Logs data usage via manager
      */
-    logUsage(browserId: string, start: string, end: string, bytes: number): Promise<void>;
+    logUsage(browserId: string, start: string, end: string, bytes: number, isOneTime?: boolean): Promise<void>;
 }

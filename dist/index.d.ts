@@ -2,8 +2,15 @@
  * Roverfox Client - Main entry point
  * Connects to distributed Roverfox servers via manager
  */
-import { BrowserContext } from 'playwright';
+import type { BrowserContext } from 'playwright';
+import type { NewProfileOptions } from './types.js';
 import type { RoverFoxProfileData } from './types/client.js';
+export interface RoverfoxCloseOptions {
+    isOneTime?: boolean;
+}
+export interface RoverfoxBrowserContext extends BrowserContext {
+    close(options?: Parameters<BrowserContext['close']>[0] & RoverfoxCloseOptions): Promise<void>;
+}
 export declare class RoverfoxClient {
     private connectionPool;
     private managerClient;
@@ -19,11 +26,11 @@ export declare class RoverfoxClient {
     /**
      * Launch a browser profile - gets server assignment from manager
      */
-    launchProfile(browserId: string): Promise<BrowserContext>;
+    launchProfile(browserId: string): Promise<RoverfoxBrowserContext>;
     /**
      * Launch a one-time browser without profile
      */
-    launchOneTimeBrowser(proxyUrl: string | null): Promise<BrowserContext>;
+    launchOneTimeBrowser(proxyUrl: string | null, options?: NewProfileOptions): Promise<RoverfoxBrowserContext>;
     /**
      * Check if a port is in use
      */
@@ -40,15 +47,11 @@ export declare class RoverfoxClient {
      * Note: Local contexts don't use streaming/replay functionality
      * This is a static method - no client instance required
      */
-    static launchLocalContext(proxyUrl?: string): Promise<BrowserContext>;
+    static launchLocalContext(proxyUrl?: string): Promise<RoverfoxBrowserContext>;
     /**
      * Starts the local roverfox server
      */
     private static startLocalServer;
-    /**
-     * Shuts down the local roverfox server
-     */
-    private static shutdownLocalServer;
     /**
      * Internal method to launch instance with profile data
      */
@@ -56,7 +59,7 @@ export declare class RoverfoxClient {
     /**
      * Creates a new profile
      */
-    createProfile(proxyUrl: string, proxyId: number): Promise<RoverFoxProfileData>;
+    createProfile(proxyUrl: string, proxyId: number, options?: NewProfileOptions): Promise<RoverFoxProfileData>;
     /**
      * Deletes a profile
      */
@@ -82,3 +85,4 @@ export declare class RoverfoxClient {
 export { RoverfoxClient as default };
 export type { GeoLocationData, ProxyConfig, } from '@roverfox/geolocation-service';
 export { getGeoService, IPGeolocationService, } from '@roverfox/geolocation-service';
+export type { Platform } from './types.js';
