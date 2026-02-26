@@ -3,7 +3,7 @@
  * Connects to distributed Roverfox servers via manager
  */
 import type { BrowserContext } from 'playwright';
-import type { NewProfileOptions } from './types.js';
+import type { BrowserType, NewProfileOptions } from './types.js';
 import type { RoverFoxProfileData } from './types/client.js';
 export interface RoverfoxCloseOptions {
     isOneTime?: boolean;
@@ -19,14 +19,20 @@ export declare class RoverfoxClient {
     private dataUsageTrackers;
     private geoService;
     private debug;
+    private workerWsUrl;
     private static localServer;
     private static localServerConfig;
     private static localPort;
-    constructor(wsAPIKey: string, managerUrl?: string, debug?: boolean);
+    constructor(wsAPIKey: string, managerUrl?: string, debug?: boolean, options?: {
+        workerWsUrl?: string;
+    });
     /**
-     * Launch a browser profile - gets server assignment from manager
+     * Launch a browser profile - gets server assignment from manager.
+     * Optionally pass a proxyUrl to override dynamic proxy selection.
      */
-    launchProfile(browserId: string): Promise<RoverfoxBrowserContext>;
+    launchProfile(browserId: string, options?: {
+        proxyUrl?: string;
+    }): Promise<RoverfoxBrowserContext>;
     /**
      * Launch a one-time browser without profile
      */
@@ -47,7 +53,7 @@ export declare class RoverfoxClient {
      * Note: Local contexts don't use streaming/replay functionality
      * This is a static method - no client instance required
      */
-    static launchLocalContext(proxyUrl?: string): Promise<RoverfoxBrowserContext>;
+    static launchLocalContext(proxyUrl?: string, browserType?: BrowserType): Promise<RoverfoxBrowserContext>;
     /**
      * Starts the local roverfox server
      */
@@ -57,9 +63,11 @@ export declare class RoverfoxClient {
      */
     private launchInstance;
     /**
-     * Creates a new profile
+     * Creates a new profile with auto-assigned geo state and fingerprint.
+     * Geo is assigned proportionally based on proxy capacity per state.
+     * Override with options.geoState/latitude/longitude if needed.
      */
-    createProfile(proxyUrl: string, proxyId: number, options?: NewProfileOptions): Promise<RoverFoxProfileData>;
+    createProfile(options?: NewProfileOptions): Promise<RoverFoxProfileData>;
     /**
      * Deletes a profile
      */
@@ -85,4 +93,8 @@ export declare class RoverfoxClient {
 export { RoverfoxClient as default };
 export type { GeoLocationData, ProxyConfig, } from '@roverfox/geolocation-service';
 export { getGeoService, IPGeolocationService, } from '@roverfox/geolocation-service';
-export type { Platform } from './types.js';
+export type { FingerprintInitValues } from './fingerprint-init-script.js';
+export { applyFingerprint } from './fingerprint-init-script.js';
+export { generateRandomLinuxFontSubset, LINUX_FONTS } from './linux-fonts.js';
+export { generateRandomFontSubset, MAC_FONTS } from './mac-fonts.js';
+export type { BrowserType, Platform } from './types.js';

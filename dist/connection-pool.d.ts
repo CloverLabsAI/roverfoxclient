@@ -3,6 +3,7 @@
  */
 import { Browser } from 'playwright';
 import WebSocket from 'ws';
+import type { BrowserType } from './types.js';
 export declare class ConnectionPool {
     private browsers;
     private replayWebSockets;
@@ -18,7 +19,7 @@ export declare class ConnectionPool {
     /**
      * Gets or creates a browser connection for the given endpoint
      */
-    getBrowserConnection(wsEndpoint: string): Promise<Browser>;
+    getBrowserConnection(wsEndpoint: string, browserType?: BrowserType): Promise<Browser>;
     /**
      * Connects to a browser server
      */

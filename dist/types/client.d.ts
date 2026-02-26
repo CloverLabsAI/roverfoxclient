@@ -38,11 +38,12 @@ export interface StorageState {
     cookies: Cookie[];
     origins: OriginStorage[];
 }
-export interface ProfileStorageData {
-    proxyUrl: string | null;
+export type { BrowserType } from '@roverfox/types';
+interface BaseProfileData {
+    proxyUrl?: string | null;
     storageState: StorageState;
-    fontSpacingSeed: number;
-    audioFingerprintSeed?: number;
+    fingerprintId?: string;
+    userAgent?: string;
     screenDimensions?: {
         width: number;
         height: number;
@@ -60,7 +61,25 @@ export interface ProfileStorageData {
     };
     countryCode?: string;
     lastKnownIP?: string;
+    navigatorPlatform?: string;
+    navigatorOscpu?: string;
+    hardwareConcurrency?: number;
+    webglVendor?: string;
+    webglRenderer?: string;
+    canvasSeed?: number;
+    fontList?: string[];
+    speechVoices?: string[];
 }
+export interface CamoufoxProfileData extends BaseProfileData {
+    browserType: 'camoufox';
+    fontSpacingSeed: number;
+    audioFingerprintSeed?: number;
+}
+export interface BraveProfileData extends BaseProfileData {
+    browserType: 'brave';
+    fingerprintingSeed: number;
+}
+export type ProfileStorageData = CamoufoxProfileData | BraveProfileData;
 export type RoverFoxProfileData = {
     browser_id: string;
     data: ProfileStorageData;

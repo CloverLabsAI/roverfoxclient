@@ -21,6 +21,14 @@ export declare class StorageManager {
      */
     setFingerprintingProperties(page: Page, profile: RoverFoxProfileData): Promise<void>;
     /**
+     * Sets Camoufox-specific fingerprinting properties
+     */
+    private setCamoufoxFingerprintingProperties;
+    /**
+     * Sets Brave-specific fingerprinting properties
+     */
+    private setBraveFingerprintingProperties;
+    /**
      * Exports storage from a page
      */
     private exportStorage;

@@ -1,15 +1,84 @@
 /**
  * Client for communicating with Roverfox Manager
  */
-import type { Platform, ServerAssignment, ServerAssignmentOptions } from './types.js';
+import type { BrowserType, Platform, ServerAssignment, ServerAssignmentOptions } from './types.js';
 export declare class ManagerClient {
-    private managerUrl;
+    private manager;
     private debug;
-    constructor(managerUrl?: string, debug?: boolean);
+    constructor(apiKey: string, managerUrl?: string, debug?: boolean);
     /**
      * Gets server assignment from manager
      */
     getServerAssignment(options?: ServerAssignmentOptions): Promise<ServerAssignment>;
+    /**
+     * Assigns the least-used Firefox fingerprint from the pool.
+     * Returns fingerprint data mapped to ProfileStorageData fields.
+     */
+    assignFingerprint(platform?: Platform, browserType?: BrowserType): Promise<{
+        fingerprintId: string;
+        userAgent: string | null;
+        navigatorPlatform: string;
+        navigatorOscpu: string;
+        hardwareConcurrency: number;
+        webglVendor: string | null;
+        webglRenderer: string | null;
+        screenDimensions: {
+            width: number;
+            height: number;
+            colorDepth: number;
+        };
+        devicePixelRatio: number;
+        fontList: string[];
+        speechVoices: string[];
+    }>;
+    /**
+     * Fetches a specific fingerprint by ID (for backfill of missing fields).
+     * Returns the same format as assignFingerprint() but does NOT increment times_assigned.
+     */
+    getFingerprint(fingerprintId: string): Promise<{
+        fingerprintId: string;
+        userAgent: string | null;
+        navigatorPlatform: string;
+        navigatorOscpu: string;
+        hardwareConcurrency: number;
+        webglVendor: string | null;
+        webglRenderer: string | null;
+        screenDimensions: {
+            width: number;
+            height: number;
+            colorDepth: number;
+        };
+        devicePixelRatio: number;
+        fontList: string[];
+        speechVoices: string[];
+    }>;
+    /**
+     * Selects a geo-matched proxy for a browser profile.
+     * Manager handles the DB lookup, health check, and reservation.
+     */
+    selectProxy(params: {
+        browserId: string;
+        geoState?: string;
+        latitude?: number;
+        longitude?: number;
+    }): Promise<{
+        proxyId: number;
+        proxyUrl: string;
+        exitIp: string | null;
+        geoState: string | null;
+    }>;
+    /**
+     * Releases a proxy back to the pool after session ends.
+     */
+    releaseProxy(proxyId: number, rotate?: boolean): Promise<void>;
+    /**
+     * Assigns a geo state to a profile proportionally based on proxy availability.
+     */
+    assignGeo(browserId: string): Promise<{
+        geoState: string;
+        latitude: number;
+        longitude: number;
+    }>;
     /**
      * Lists all profiles via manager
      */
@@ -24,11 +93,11 @@ export declare class ManagerClient {
     /**
      * Creates a new profile via manager
      */
-    createProfile(browserId: string, profileData: any, proxyId: number, platform?: Platform): Promise<void>;
+    createProfile(browserId: string, profileData: any, platform?: Platform, browserType?: BrowserType): Promise<void>;
     /**
      * Updates profile data via manager
      */
-    updateProfileData(browserId: string, profileData: any, proxyId?: number): Promise<void>;
+    updateProfileData(browserId: string, profileData: any): Promise<void>;
     /**
      * Deletes a profile via manager
      */
@@ -44,5 +113,5 @@ export declare class ManagerClient {
     /**
      * Logs data usage via manager
      */
-    logUsage(browserId: string, start: string, end: string, bytes: number, isOneTime?: boolean): Promise<void>;
+    logUsage(browserId: string, start: string, end: string, bytes: number, isOneTime?: boolean, serverId?: string): Promise<void>;
 }
