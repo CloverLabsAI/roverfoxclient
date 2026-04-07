@@ -57,10 +57,11 @@ export declare class ManagerClient {
      * Manager handles the DB lookup, health check, and reservation.
      */
     selectProxy(params: {
-        browserId: string;
+        browserId?: string;
         geoState?: string;
         latitude?: number;
         longitude?: number;
+        service?: string;
     }): Promise<{
         proxyId: number;
         proxyUrl: string;

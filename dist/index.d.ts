@@ -32,6 +32,7 @@ export declare class RoverfoxClient {
      */
     launchProfile(browserId: string, options?: {
         proxyUrl?: string;
+        service?: string;
     }): Promise<RoverfoxBrowserContext>;
     /**
      * Launch a one-time browser without profile
