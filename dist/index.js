@@ -27316,8 +27316,8 @@ function formatProxyURL(proxyUrl) {
         const url = new URL(proxyUrl);
         return {
             server: `${url.protocol}//${url.host}`,
-            username: url.username || '',
-            password: url.password || '',
+            username: url.username ? decodeURIComponent(url.username) : '',
+            password: url.password ? decodeURIComponent(url.password) : '',
         };
     }
     catch (_error) {
@@ -27800,12 +27800,26 @@ class RoverfoxClient {
      */
     async launchOneTimeBrowser(proxyUrl, options) {
         const browserType = (options === null || options === void 0 ? void 0 : options.browserType) || 'camoufox';
-        // Get server assignment from manager
-        const assignment = await this.managerClient.getServerAssignment({
-            platform: options === null || options === void 0 ? void 0 : options.platform,
-            browserType,
-        });
-        const { roverfoxWsUrl, replayWsUrl } = assignment;
+        // Get server assignment (bypass manager if workerWsUrl is set for local testing)
+        let roverfoxWsUrl;
+        let replayWsUrl;
+        let serverId = undefined;
+        if (this.workerWsUrl) {
+            roverfoxWsUrl = this.workerWsUrl;
+            replayWsUrl = this.workerWsUrl.replace('/roverfox', '/replay');
+            if (this.debug) {
+                console.log(`[client] Using direct worker connection for one-time browser: ${roverfoxWsUrl}`);
+            }
+        }
+        else {
+            const assignment = await this.managerClient.getServerAssignment({
+                platform: options === null || options === void 0 ? void 0 : options.platform,
+                browserType,
+            });
+            roverfoxWsUrl = assignment.roverfoxWsUrl;
+            replayWsUrl = assignment.replayWsUrl;
+            serverId = assignment.serverId;
+        }
         // Get or create connections with correct browser type
         const browser = await this.connectionPool.getBrowserConnection(roverfoxWsUrl, browserType);
         const replayWs = this.connectionPool.getReplayWebSocket(replayWsUrl);
@@ -27834,7 +27848,7 @@ class RoverfoxClient {
             browser_id: browserId,
             data: profileData,
         }, proxyObject, browserId, true, // skipAudit
-        null, assignment.serverId);
+        null, serverId);
         // Close as one time context
         const closeContext = context.close.bind(context);
         context.close = (options) => closeContext(Object.assign(Object.assign({}, options), { isOneTime: true }));

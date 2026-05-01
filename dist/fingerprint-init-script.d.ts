@@ -8,10 +8,10 @@
  * The page event handler provides a fallback that re-applies fingerprinting properties
  * after navigation, covering edge cases the init script may miss.
  */
-import type { Disposable, Page } from 'playwright';
+import type { Page } from 'playwright';
 import type { RoverFoxProfileData } from './types/client.js';
 interface FingerprintContext {
-    addInitScript(script: (arg: any) => void, arg?: any): Promise<Disposable>;
+    addInitScript(script: (arg: any) => void, arg?: any): Promise<void>;
     on(event: 'page', listener: (page: Page) => void): void;
 }
 export interface FingerprintInitValues {
