@@ -11,7 +11,7 @@
 import type { Page } from 'playwright';
 import type { RoverFoxProfileData } from './types/client.js';
 interface FingerprintContext {
-    addInitScript(script: (arg: any) => void, arg?: any): Promise<void>;
+    addInitScript(script: (arg: any) => void, arg?: any): Promise<unknown>;
     on(event: 'page', listener: (page: Page) => void): void;
 }
 export interface FingerprintInitValues {
