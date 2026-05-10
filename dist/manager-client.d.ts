@@ -71,7 +71,7 @@ export declare class ManagerClient {
     /**
      * Releases a proxy back to the pool after session ends.
      */
-    releaseProxy(proxyId: number, rotate?: boolean): Promise<void>;
+    releaseProxy(proxyId: number, rotate?: boolean, browserId?: string): Promise<void>;
     /**
      * Assigns a geo state to a profile proportionally based on proxy availability.
      */

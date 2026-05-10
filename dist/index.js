@@ -26785,9 +26785,10 @@ class ManagerClient {
     /**
      * Releases a proxy back to the pool after session ends.
      */
-    async releaseProxy(proxyId, rotate = true) {
+    async releaseProxy(proxyId, rotate = true, browserId) {
         try {
-            await this.manager.post('/api/proxies/release', { proxyId, rotate });
+            await this.manager.post('/api/proxies/release', Object.assign({ proxyId,
+                rotate }, (browserId ? { browserId } : {})));
         }
         catch (error) {
             if (this.debug)
@@ -28080,7 +28081,7 @@ class RoverfoxClient {
             // Release dynamically selected proxy back to the pool (with 5s timeout to avoid hanging if manager is unreachable)
             if (selectedProxyId) {
                 await Promise.race([
-                    this.managerClient.releaseProxy(selectedProxyId, true),
+                    this.managerClient.releaseProxy(selectedProxyId, true, browserId),
                     new Promise((resolve) => setTimeout(resolve, 5000)),
                 ]).catch(() => { });
             }
