@@ -8,7 +8,7 @@ import require$$2 from 'https';
 import require$$5, { fileURLToPath } from 'url';
 import * as fs from 'fs';
 import fs__default from 'fs';
-import require$$8, { randomFillSync, randomUUID } from 'crypto';
+import crypto, { randomFillSync, randomUUID } from 'crypto';
 import http2 from 'http2';
 import require$$4 from 'assert';
 import require$$1$1 from 'tty';
@@ -18,9 +18,11 @@ import require$$4$1, { EventEmitter } from 'events';
 import * as require$$0$1 from 'net';
 import require$$0__default from 'net';
 import require$$1$2 from 'tls';
+import { createRequire } from 'module';
 import { chromium, firefox } from 'playwright';
 import WebSocket, { WebSocketServer } from 'ws';
 import require$$0$2 from 'buffer';
+import { randomUUID as randomUUID$1 } from 'node:crypto';
 
 /**
  * Create a bound version of a function with a specified `this` context
@@ -13868,7 +13870,7 @@ function requireForm_data () {
 	var parseUrl = require$$5.parse;
 	var fs = fs__default;
 	var Stream = stream.Stream;
-	var crypto = require$$8;
+	var crypto$1 = crypto;
 	var mime = requireMimeTypes();
 	var asynckit = requireAsynckit();
 	var setToStringTag = /*@__PURE__*/ requireEsSetTostringtag();
@@ -14206,7 +14208,7 @@ function requireForm_data () {
 	  // This generates a 50 character boundary similar to those used by Firefox.
 
 	  // They are optimized for boyer-moore parsing.
-	  this._boundary = '--------------------------' + crypto.randomBytes(12).toString('hex');
+	  this._boundary = '--------------------------' + crypto$1.randomBytes(12).toString('hex');
 	};
 
 	// Note: getLengthSync DOESN'T calculate streams length
@@ -14800,7 +14802,7 @@ const generateString = (size = 16, alphabet = ALPHABET.ALPHA_DIGIT) => {
   let str = '';
   const { length } = alphabet;
   const randomValues = new Uint32Array(size);
-  require$$8.randomFillSync(randomValues);
+  crypto.randomFillSync(randomValues);
   for (let i = 0; i < size; i++) {
     str += alphabet[randomValues[i] % length];
   }
@@ -25231,6 +25233,115 @@ class BrowserProxy {
     }
 }
 
+/**
+ * RecordingHub — receives rrweb event chunks streamed by client SDKs over the
+ * replay WebSocket. Buffers chunks per session in memory until finalization.
+ *
+ * No durable persistence here — Step 4 will read finalized sessions out via
+ * `getFinalizedSession` and upload them.
+ */
+class RecordingHub {
+    sessions = new Map(); // key: `${browserId}:${recordingId}`
+    totalBytesAllSessions = 0;
+    MAX_BYTES = 64 * 1024 * 1024; // 64 MB
+    uploader = null;
+    setUploader(uploader) {
+        this.uploader = uploader;
+    }
+    sessionKey(browserId, recordingId) {
+        return `${browserId}:${recordingId}`;
+    }
+    handleChunk(msg) {
+        const key = this.sessionKey(msg.browserId, msg.recordingId);
+        let state = this.sessions.get(key);
+        const now = Date.now();
+        if (!state) {
+            state = {
+                browserId: msg.browserId,
+                recordingId: msg.recordingId,
+                chunks: [],
+                totalEvents: 0,
+                totalBytes: 0,
+                firstSeqReceived: msg.seq,
+                // initialize so the first chunk's seq is treated as in-order
+                lastSeqReceived: msg.seq - 1,
+                startedAt: now,
+                lastChunkAt: now,
+                status: 'recording',
+            };
+            this.sessions.set(key, state);
+        }
+        if (msg.seq !== state.lastSeqReceived + 1) {
+            console.warn(`[recording-hub] WARN: out-of-order or gap browserId=${msg.browserId} recordingId=${msg.recordingId} expected=${state.lastSeqReceived + 1} got=${msg.seq}`);
+        }
+        const chunkBytes = JSON.stringify(msg.events).length;
+        state.chunks.push(msg.events);
+        state.totalEvents += msg.events.length;
+        state.totalBytes += chunkBytes;
+        state.lastSeqReceived = msg.seq;
+        state.lastChunkAt = now;
+        this.totalBytesAllSessions += chunkBytes;
+        this.evictIfOverCap();
+    }
+    handleFinalize(msg) {
+        const key = this.sessionKey(msg.browserId, msg.recordingId);
+        const state = this.sessions.get(key);
+        if (!state) {
+            console.warn(`[recording-hub] WARN: finalize received for unknown session browserId=${msg.browserId} recordingId=${msg.recordingId}`);
+            return null;
+        }
+        state.status = 'finalized';
+        console.log(`[recording-hub] finalized browserId=${msg.browserId} recordingId=${msg.recordingId} chunks=${state.chunks.length} totalEvents=${state.totalEvents} totalBytes=${state.totalBytes}`);
+        if (this.uploader) {
+            const uploader = this.uploader;
+            const finalizedKey = key;
+            const finalizedState = state;
+            uploader
+                .upload(finalizedState)
+                .then(() => {
+                if (this.sessions.has(finalizedKey)) {
+                    this.totalBytesAllSessions -= finalizedState.totalBytes;
+                    this.sessions.delete(finalizedKey);
+                }
+            })
+                .catch((err) => {
+                console.error(`[recording-hub] upload failed browserId=${finalizedState.browserId} recordingId=${finalizedState.recordingId}:`, err);
+                // TODO(CLO-518 follow-up): retry failed uploads instead of dropping
+                if (this.sessions.has(finalizedKey)) {
+                    this.totalBytesAllSessions -= finalizedState.totalBytes;
+                    this.sessions.delete(finalizedKey);
+                }
+            });
+        }
+        return state;
+    }
+    getFinalizedSession(browserId, recordingId) {
+        const state = this.sessions.get(this.sessionKey(browserId, recordingId));
+        if (!state || state.status !== 'finalized')
+            return null;
+        return state;
+    }
+    evictIfOverCap() {
+        while (this.totalBytesAllSessions > this.MAX_BYTES &&
+            this.sessions.size > 0) {
+            let oldestKey = null;
+            let oldestStartedAt = Infinity;
+            for (const [k, s] of this.sessions) {
+                if (s.startedAt < oldestStartedAt) {
+                    oldestStartedAt = s.startedAt;
+                    oldestKey = k;
+                }
+            }
+            if (!oldestKey)
+                break;
+            const evicted = this.sessions.get(oldestKey);
+            console.warn(`[recording-hub] WARN: memory cap exceeded (${this.totalBytesAllSessions} > ${this.MAX_BYTES}) — evicting oldest session browserId=${evicted.browserId} recordingId=${evicted.recordingId} bytes=${evicted.totalBytes}`);
+            this.totalBytesAllSessions -= evicted.totalBytes;
+            this.sessions.delete(oldestKey);
+        }
+    }
+}
+
 // Type guards for inbound messages
 function isRegisterProfileMessage(msg) {
     return (msg.type === 'register-profile' &&
@@ -25320,6 +25431,25 @@ function isScrollCommand(msg) {
         typeof m.deltaX === 'number' &&
         typeof m.deltaY === 'number');
 }
+function isRecordingChunkMessage(msg) {
+    const m = msg;
+    return (msg.type === 'recording-chunk' &&
+        typeof m.browserId === 'string' &&
+        typeof m.recordingId === 'string' &&
+        typeof m.seq === 'number' &&
+        Array.isArray(m.events));
+}
+function isRecordingFinalizeMessage(msg) {
+    const m = msg;
+    return (msg.type === 'recording-finalize' &&
+        typeof m.browserId === 'string' &&
+        typeof m.recordingId === 'string' &&
+        typeof m.totalChunks === 'number' &&
+        typeof m.totalEvents === 'number' &&
+        typeof m.approxBytes === 'number' &&
+        typeof m.startedAt === 'number' &&
+        typeof m.endedAt === 'number');
+}
 // Runtime validation function
 function validateInboundMessage(data) {
     if (!data || typeof data !== 'object' || !('type' in data)) {
@@ -25353,6 +25483,10 @@ function validateInboundMessage(data) {
     if (isKeyboardPressCommand(msg))
         return msg;
     if (isScrollCommand(msg))
+        return msg;
+    if (isRecordingChunkMessage(msg))
+        return msg;
+    if (isRecordingFinalizeMessage(msg))
         return msg;
     return null;
 }
@@ -25800,15 +25934,17 @@ class ReplayHub {
 class WebSocketManager {
     config;
     replayHub;
+    recordingHub;
     browserProxy;
     authManager;
     wsServer = null;
     wsServerUrl = null;
     connectionReporter = null;
     isDraining = false;
-    constructor(config, replayHub, browserProxy, authManager) {
+    constructor(config, replayHub, recordingHub, browserProxy, authManager) {
         this.config = config;
         this.replayHub = replayHub;
+        this.recordingHub = recordingHub;
         this.browserProxy = browserProxy;
         this.authManager = authManager;
     }
@@ -25961,6 +26097,18 @@ class WebSocketManager {
                 console.warn('[replay] Received non-JSON message, ignoring');
                 return;
             }
+            // Recording messages are siblings of replay messages on the same WS;
+            // route them to the recording hub before falling through to ReplayHub.
+            if (data && typeof data === 'object' && 'type' in data) {
+                if (isRecordingChunkMessage(data)) {
+                    this.recordingHub.handleChunk(data);
+                    return;
+                }
+                if (isRecordingFinalizeMessage(data)) {
+                    this.recordingHub.handleFinalize(data);
+                    return;
+                }
+            }
             this.replayHub.handleScreenshotMessage(clientWs, data);
         });
         clientWs.on('close', () => {
@@ -26020,7 +26168,7 @@ class LocalProxyServer {
         this.numBrowserServers = (_a = config.numBrowserServers) !== null && _a !== void 0 ? _a : 1;
         this.browserProxy = new BrowserProxy([], (_b = config.quiet) !== null && _b !== void 0 ? _b : false);
         this.authManager = new AuthManager(config);
-        this.wsManager = new WebSocketManager(config, new ReplayHub(), this.browserProxy, this.authManager);
+        this.wsManager = new WebSocketManager(config, new ReplayHub(), new RecordingHub(), this.browserProxy, this.authManager);
     }
     /**
      * Starts the local proxy server
@@ -26937,6 +27085,177 @@ class ManagerClient {
 }
 
 /**
+ * rrweb session-recording init script.
+ *
+ * Returns a string of JS code intended to be injected via Playwright's
+ * `addInitScript`. Assumes the rrweb library bundle has already been injected
+ * (in a prior `addInitScript` call) and exposes a global `rrweb` object.
+ *
+ * Events are buffered in-page and flushed to the Node side via the
+ * `window.rfRecordEvent` binding (set up via `context.exposeBinding` before
+ * this script runs). Flush triggers: buffer reaches 50 events, 1s timer, or
+ * page lifecycle (`beforeunload` / `pagehide`).
+ */
+function buildRrwebInitScript() {
+    return `
+(() => {
+  if (window.__rfRecorderInstalled) return;
+  window.__rfRecorderInstalled = true;
+
+  if (typeof rrweb === 'undefined' || !rrweb || typeof rrweb.record !== 'function') {
+    console.warn('[rrweb-event] rrweb global not available; skipping recorder install');
+    return;
+  }
+
+  const BATCH_SIZE = 50;
+  const FLUSH_INTERVAL_MS = 1000;
+  let _rfBuffer = [];
+  let _rfTimer = null;
+
+  function flush() {
+    if (_rfTimer) {
+      clearTimeout(_rfTimer);
+      _rfTimer = null;
+    }
+    if (_rfBuffer.length === 0) return;
+    const batch = _rfBuffer;
+    _rfBuffer = [];
+    try {
+      if (typeof window.rfRecordEvent === 'function') {
+        window.rfRecordEvent(batch);
+      }
+    } catch (_e) {
+      // Swallow — binding unavailable shouldn't crash the page.
+    }
+  }
+
+  function scheduleFlush() {
+    if (_rfTimer) return;
+    _rfTimer = setTimeout(flush, FLUSH_INTERVAL_MS);
+  }
+
+  rrweb.record({
+    emit(event) {
+      _rfBuffer.push(event);
+      if (_rfBuffer.length >= BATCH_SIZE) {
+        flush();
+      } else {
+        scheduleFlush();
+      }
+    },
+    sampling: { mousemove: 50, scroll: 100 },
+    maskAllInputs: true,
+    recordCanvas: false,
+    checkoutEveryNms: 5 * 60 * 1000,
+  });
+
+  window.addEventListener('beforeunload', flush);
+  window.addEventListener('pagehide', flush);
+})();
+`;
+}
+
+/**
+ * RecordingManager — receives rrweb event batches from the browser via a
+ * Playwright `exposeBinding` channel, tracks per-session stats, and forwards
+ * each batch over the existing replay WebSocket as a `recording-chunk`
+ * message. Sends a `recording-finalize` message on session end.
+ *
+ * In-memory only on this side; durable persistence is the worker's job.
+ */
+class RecordingManager {
+    constructor() {
+        this.sessions = new Map();
+        this.boundContexts = new WeakSet();
+    }
+    /**
+     * Set up the exposed binding on a context. Must be called BEFORE addInitScript
+     * for any script that references `window.rfRecordEvent`.
+     * Idempotent for a given context.
+     */
+    async attachToContext(context, browserId, replayWs, connectionPool) {
+        if (!this.sessions.has(browserId)) {
+            const now = Date.now();
+            this.sessions.set(browserId, {
+                browserId,
+                recordingId: randomUUID$1(),
+                startedAt: now,
+                lastEventAt: now,
+                eventCount: 0,
+                approxBytes: 0,
+                batchCount: 0,
+                seq: 0,
+                replayWs,
+                connectionPool,
+            });
+        }
+        if (this.boundContexts.has(context))
+            return;
+        this.boundContexts.add(context);
+        await context.exposeBinding('rfRecordEvent', (_source, batch) => {
+            void this.handleBatch(browserId, batch);
+        });
+    }
+    /**
+     * Flush a finalize message and stop tracking the session. Returns the final
+     * session state for callers that want to log additional context.
+     */
+    async finalize(browserId) {
+        const session = this.sessions.get(browserId);
+        if (!session)
+            return null;
+        this.sessions.delete(browserId);
+        if (session.eventCount === 0) {
+            console.warn(`[recording] WARNING: session ${browserId} ended with zero events recorded — recorder may not be running`);
+        }
+        const endedAt = session.lastEventAt;
+        const finalizeMsg = {
+            type: 'recording-finalize',
+            browserId,
+            recordingId: session.recordingId,
+            totalChunks: session.batchCount,
+            totalEvents: session.eventCount,
+            approxBytes: session.approxBytes,
+            startedAt: session.startedAt,
+            endedAt,
+        };
+        try {
+            await session.connectionPool.safeSend(session.replayWs, finalizeMsg);
+        }
+        catch (err) {
+            console.warn(`[recording] WARN: failed to send finalize for browserId=${browserId} — message dropped`, err);
+        }
+        console.log(`[recording] finalized browserId=${browserId} totalChunks=${session.batchCount} totalEvents=${session.eventCount} approxBytes=${session.approxBytes} duration=${endedAt - session.startedAt}ms`);
+        return session;
+    }
+    async handleBatch(browserId, batch) {
+        const session = this.sessions.get(browserId);
+        if (!session)
+            return;
+        if (!Array.isArray(batch) || batch.length === 0)
+            return;
+        const seq = session.seq++;
+        session.lastEventAt = Date.now();
+        session.eventCount += batch.length;
+        session.approxBytes += JSON.stringify(batch).length;
+        session.batchCount += 1;
+        const chunkMsg = {
+            type: 'recording-chunk',
+            browserId,
+            recordingId: session.recordingId,
+            seq,
+            events: batch,
+        };
+        try {
+            await session.connectionPool.safeSend(session.replayWs, chunkMsg);
+        }
+        catch (err) {
+            console.warn(`[recording] WARN: failed to send chunk seq=${seq} for browserId=${browserId} — buffering not implemented yet, chunk dropped`, err);
+        }
+    }
+}
+
+/**
  * Replay and screenshot streaming management
  */
 async function sendPageClosedNotification(ws, browserId, pageId) {
@@ -27331,6 +27650,8 @@ function formatProxyURL(proxyUrl) {
  * Roverfox Client - Main entry point
  * Connects to distributed Roverfox servers via manager
  */
+const requireFromHere = createRequire(import.meta.url);
+const RRWEB_BUNDLE_PATH = requireFromHere.resolve('rrweb/dist/rrweb.min.js');
 // Build a Firefox UA string matching the given navigator.platform.
 // Uses Camoufox's Firefox version (146.0) regardless of what the pool collected.
 const FIREFOX_VERSION = '146.0';
@@ -27390,6 +27711,7 @@ function generateProfileData(fp, platform, browserType, proxyUrl) {
 }
 class RoverfoxClient {
     constructor(wsAPIKey, managerUrl, debug = false, options) {
+        this.recordingManager = new RecordingManager();
         // Direct worker connection (bypasses manager server assignment for local testing)
         this.workerWsUrl = null;
         this.debug = debug;
@@ -27410,6 +27732,7 @@ class RoverfoxClient {
      * Optionally pass a proxyUrl to override dynamic proxy selection.
      */
     async launchProfile(browserId, options) {
+        var _a;
         // Get server assignment (bypass manager if workerWsUrl is set for local testing)
         let roverfoxWsUrl;
         let replayWsUrl;
@@ -27464,7 +27787,7 @@ class RoverfoxClient {
             try {
                 proxyUrlObj = new URL(options.proxyUrl);
             }
-            catch (_a) {
+            catch (_b) {
                 throw new Error(`Invalid proxyUrl provided: ${options.proxyUrl}`);
             }
             proxyObject = {
@@ -27794,7 +28117,7 @@ class RoverfoxClient {
         // Create browser context with profile data
         return this.launchInstance(browser, replayWs, profile, proxyObject, browserId, false, // skipAudit
         selectedProxyId, // dynamic proxy to release on close
-        serverId);
+        serverId, (_a = options === null || options === void 0 ? void 0 : options.recording) !== null && _a !== void 0 ? _a : false);
     }
     /**
      * Launch a one-time browser without profile
@@ -27835,7 +28158,7 @@ class RoverfoxClient {
             browser_id: browserId,
             data: profileData,
         }, proxyObject, browserId, true, // skipAudit
-        null, assignment.serverId);
+        null, assignment.serverId, false);
         // Close as one time context
         const closeContext = context.close.bind(context);
         context.close = (options) => closeContext(Object.assign(Object.assign({}, options), { isOneTime: true }));
@@ -27999,7 +28322,7 @@ class RoverfoxClient {
     /**
      * Internal method to launch instance with profile data
      */
-    async launchInstance(browser, replayWs, profile, proxyObject, browserId, skipAudit = false, selectedProxyId = null, serverId) {
+    async launchInstance(browser, replayWs, profile, proxyObject, browserId, skipAudit = false, selectedProxyId = null, serverId, recording = false) {
         var _a, _b, _c;
         // Strip IndexedDB from storage state to prevent restoration conflicts
         let storageStateToUse = profile.data.storageState;
@@ -28038,6 +28361,13 @@ class RoverfoxClient {
             fontSpacingSeed: profile.data.fontSpacingSeed,
             audioFingerprintSeed: profile.data.audioFingerprintSeed,
         })), { screenWidth: (_a = profile.data.screenDimensions) === null || _a === void 0 ? void 0 : _a.width, screenHeight: (_b = profile.data.screenDimensions) === null || _b === void 0 ? void 0 : _b.height, screenColorDepth: (_c = profile.data.screenDimensions) === null || _c === void 0 ? void 0 : _c.colorDepth, timezone: profile.data.timezone, lastKnownIP: profile.data.lastKnownIP, navigatorPlatform: profile.data.navigatorPlatform, navigatorOscpu: profile.data.navigatorOscpu, hardwareConcurrency: profile.data.hardwareConcurrency, webglVendor: profile.data.webglVendor, webglRenderer: profile.data.webglRenderer, canvasSeed: profile.data.canvasSeed, fontList: profile.data.fontList, speechVoices: profile.data.speechVoices }), profile);
+        if (recording) {
+            // Order matters: binding must exist before init scripts run
+            await this.recordingManager.attachToContext(context, browserId, replayWs, this.connectionPool);
+            await context.addInitScript({ path: RRWEB_BUNDLE_PATH });
+            await context.addInitScript(buildRrwebInitScript());
+            console.log(`[recording] rrweb injected for browserId=${browserId}`);
+        }
         // Register profile with replay hub
         try {
             await this.connectionPool.safeSend(replayWs, {
@@ -28076,6 +28406,9 @@ class RoverfoxClient {
         const closeContext = context.close.bind(context);
         context.close = async (options) => {
             var _a;
+            if (recording) {
+                await this.recordingManager.finalize(browserId);
+            }
             if (!skipAudit)
                 await this.managerClient.logAudit(browserId, 'closeContext', {});
             // Release dynamically selected proxy back to the pool (with 5s timeout to avoid hanging if manager is unreachable)

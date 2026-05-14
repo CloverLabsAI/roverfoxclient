@@ -69,6 +69,11 @@ interface BaseProfileData {
     canvasSeed?: number;
     fontList?: string[];
     speechVoices?: string[];
+    /**
+     * @deprecated Recording activation is now per-launch via launchProfile({ recording: true }).
+     * This field is retained for backward compatibility with existing profile records but is no longer read by the client.
+     */
+    recording_enabled?: boolean;
 }
 export interface CamoufoxProfileData extends BaseProfileData {
     browserType: 'camoufox';

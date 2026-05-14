@@ -15,6 +15,7 @@ export declare class RoverfoxClient {
     private connectionPool;
     private managerClient;
     private replayManager;
+    private recordingManager;
     private storageManager;
     private dataUsageTrackers;
     private geoService;
@@ -33,6 +34,7 @@ export declare class RoverfoxClient {
     launchProfile(browserId: string, options?: {
         proxyUrl?: string;
         service?: string;
+        recording?: boolean;
     }): Promise<RoverfoxBrowserContext>;
     /**
      * Launch a one-time browser without profile
