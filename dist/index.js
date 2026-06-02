@@ -21558,7 +21558,7 @@ function requireDist () {
 var distExports = requireDist();
 
 // IP geolocation API utilities (ip-api.com)
-// Lazy getters — env vars injected by Doppler at runtime
+// Lazy getters - env vars injected by Doppler at runtime.
 function getIpApiKey() {
     return process.env.IP_API_KEY;
 }
@@ -21647,7 +21647,7 @@ class IPGeolocationService {
         }
         return data;
     }
-    // Fetch from ip-api.com (Uses Free API if the key isn't set)
+    // Fetch from ip-api.com (free tier when no IP_API_KEY is set).
     async fetchFromAPI(ip) {
         // Rate limit only for free API
         if (!useProApi()) {
@@ -21658,7 +21658,6 @@ class IPGeolocationService {
             this.lastRequestTime = Date.now();
         }
         try {
-            // Build URL based on API tier
             const ipApiBase = getIpApiBase();
             const url = useProApi()
                 ? `${ipApiBase}/json/${ip}?key=${getIpApiKey()}&fields=status,message,countryCode,timezone,lat,lon,city,region`
@@ -22072,208 +22071,14 @@ const FALLBACK_FINGERPRINTS = {
             devicePixelRatio: 2,
             speechVoices: [],
         },
+        // Brave derives all fingerprint surfaces from a single seed.
+        // Only navigatorPlatform and hardwareConcurrency are used as minimal fallbacks.
         brave: {
             navigatorPlatform: 'MacIntel',
-            navigatorOscpu: 'Intel Mac OS X 10.15',
             hardwareConcurrency: 8,
-            webglVendor: 'Intel Inc.',
-            webglRenderer: 'Intel Iris OpenGL Engine',
             screenDimensions: { width: 2560, height: 1440, colorDepth: 24 },
             devicePixelRatio: 1,
-            speechVoices: [
-                'Samantha:en-US:local',
-                'Aaron:en-US:local',
-                'Albert:en-US:local',
-                'Alice:it-IT:local',
-                'Alva:sv-SE:local',
-                'Amélie:fr-CA:local',
-                'Amira:ms-MY:local',
-                'Anna:de-DE:local',
-                'Arthur:en-GB:local',
-                'Bad News:en-US:local',
-                'Bahh:en-US:local',
-                'Bells:en-US:local',
-                'Boing:en-US:local',
-                'Bubbles:en-US:local',
-                'Carmit:he-IL:local',
-                'Catherine:en-AU:local',
-                'Cellos:en-US:local',
-                'Damayanti:id-ID:local',
-                'Daniel (English (United Kingdom)):en-GB:local',
-                'Daniel (French (France)):fr-FR:local',
-                'Daria:bg-BG:local',
-                'Eddy (German (Germany)):de-DE:local',
-                'Eddy (English (United Kingdom)):en-GB:local',
-                'Eddy (English (United States)):en-US:local',
-                'Eddy (Spanish (Spain)):es-ES:local',
-                'Eddy (Spanish (Mexico)):es-MX:local',
-                'Eddy (Finnish (Finland)):fi-FI:local',
-                'Eddy (French (Canada)):fr-CA:local',
-                'Eddy (French (France)):fr-FR:local',
-                'Eddy (Italian (Italy)):it-IT:local',
-                'Eddy (Japanese (Japan)):ja-JP:local',
-                'Eddy (Korean (South Korea)):ko-KR:local',
-                'Eddy (Portuguese (Brazil)):pt-BR:local',
-                'Eddy (Chinese (China mainland)):zh-CN:local',
-                'Eddy (Chinese (Taiwan)):zh-TW:local',
-                'Ellen:nl-BE:local',
-                'Flo (German (Germany)):de-DE:local',
-                'Flo (English (United Kingdom)):en-GB:local',
-                'Flo (English (United States)):en-US:local',
-                'Flo (Spanish (Spain)):es-ES:local',
-                'Flo (Spanish (Mexico)):es-MX:local',
-                'Flo (Finnish (Finland)):fi-FI:local',
-                'Flo (French (Canada)):fr-CA:local',
-                'Flo (French (France)):fr-FR:local',
-                'Flo (Italian (Italy)):it-IT:local',
-                'Flo (Japanese (Japan)):ja-JP:local',
-                'Flo (Korean (South Korea)):ko-KR:local',
-                'Flo (Portuguese (Brazil)):pt-BR:local',
-                'Flo (Chinese (China mainland)):zh-CN:local',
-                'Flo (Chinese (Taiwan)):zh-TW:local',
-                'Fred:en-US:local',
-                'Good News:en-US:local',
-                'Gordon:en-AU:local',
-                'Grandma (German (Germany)):de-DE:local',
-                'Grandma (English (United Kingdom)):en-GB:local',
-                'Grandma (English (United States)):en-US:local',
-                'Grandma (Spanish (Spain)):es-ES:local',
-                'Grandma (Spanish (Mexico)):es-MX:local',
-                'Grandma (Finnish (Finland)):fi-FI:local',
-                'Grandma (French (Canada)):fr-CA:local',
-                'Grandma (French (France)):fr-FR:local',
-                'Grandma (Italian (Italy)):it-IT:local',
-                'Grandma (Japanese (Japan)):ja-JP:local',
-                'Grandma (Korean (South Korea)):ko-KR:local',
-                'Grandma (Portuguese (Brazil)):pt-BR:local',
-                'Grandma (Chinese (China mainland)):zh-CN:local',
-                'Grandma (Chinese (Taiwan)):zh-TW:local',
-                'Grandpa (German (Germany)):de-DE:local',
-                'Grandpa (English (United Kingdom)):en-GB:local',
-                'Grandpa (English (United States)):en-US:local',
-                'Grandpa (Spanish (Spain)):es-ES:local',
-                'Grandpa (Spanish (Mexico)):es-MX:local',
-                'Grandpa (Finnish (Finland)):fi-FI:local',
-                'Grandpa (French (Canada)):fr-CA:local',
-                'Grandpa (French (France)):fr-FR:local',
-                'Grandpa (Italian (Italy)):it-IT:local',
-                'Grandpa (Japanese (Japan)):ja-JP:local',
-                'Grandpa (Korean (South Korea)):ko-KR:local',
-                'Grandpa (Portuguese (Brazil)):pt-BR:local',
-                'Grandpa (Chinese (China mainland)):zh-CN:local',
-                'Grandpa (Chinese (Taiwan)):zh-TW:local',
-                'Hattori:ja-JP:local',
-                'Helena:de-DE:local',
-                'Ioana:ro-RO:local',
-                'Jacques:fr-FR:local',
-                'Jester:en-US:local',
-                'Joana:pt-PT:local',
-                'Junior:en-US:local',
-                'Kanya:th-TH:local',
-                'Karen:en-AU:local',
-                'Kathy:en-US:local',
-                'Kyoko:ja-JP:local',
-                'Lana:hr-HR:local',
-                'Laura:sk-SK:local',
-                'Lekha:hi-IN:local',
-                'Lesya:uk-UA:local',
-                'Li-Mu:zh-CN:local',
-                'Linh:vi-VN:local',
-                'Luciana:pt-BR:local',
-                'Majed:ar-001:local',
-                'Marie:fr-FR:local',
-                'Martha:en-GB:local',
-                'Martin:de-DE:local',
-                'Meijia:zh-TW:local',
-                'Melina:el-GR:local',
-                'Milena:ru-RU:local',
-                'Moira:en-IE:local',
-                'Montse:ca-ES:local',
-                'Mónica:es-ES:local',
-                'Nicky:en-US:local',
-                'Nora:nb-NO:local',
-                'O-Ren:ja-JP:local',
-                'Organ:en-US:local',
-                'Paulina:es-MX:local',
-                'Ralph:en-US:local',
-                'Reed (German (Germany)):de-DE:local',
-                'Reed (English (United Kingdom)):en-GB:local',
-                'Reed (English (United States)):en-US:local',
-                'Reed (Spanish (Spain)):es-ES:local',
-                'Reed (Spanish (Mexico)):es-MX:local',
-                'Reed (Finnish (Finland)):fi-FI:local',
-                'Reed (French (Canada)):fr-CA:local',
-                'Reed (Italian (Italy)):it-IT:local',
-                'Reed (Japanese (Japan)):ja-JP:local',
-                'Reed (Korean (South Korea)):ko-KR:local',
-                'Reed (Portuguese (Brazil)):pt-BR:local',
-                'Reed (Chinese (China mainland)):zh-CN:local',
-                'Reed (Chinese (Taiwan)):zh-TW:local',
-                'Rishi:en-IN:local',
-                'Rocko (German (Germany)):de-DE:local',
-                'Rocko (English (United Kingdom)):en-GB:local',
-                'Rocko (English (United States)):en-US:local',
-                'Rocko (Spanish (Spain)):es-ES:local',
-                'Rocko (Spanish (Mexico)):es-MX:local',
-                'Rocko (Finnish (Finland)):fi-FI:local',
-                'Rocko (French (Canada)):fr-CA:local',
-                'Rocko (French (France)):fr-FR:local',
-                'Rocko (Italian (Italy)):it-IT:local',
-                'Rocko (Japanese (Japan)):ja-JP:local',
-                'Rocko (Korean (South Korea)):ko-KR:local',
-                'Rocko (Portuguese (Brazil)):pt-BR:local',
-                'Rocko (Chinese (China mainland)):zh-CN:local',
-                'Rocko (Chinese (Taiwan)):zh-TW:local',
-                'Sandy (German (Germany)):de-DE:local',
-                'Sandy (English (United Kingdom)):en-GB:local',
-                'Sandy (English (United States)):en-US:local',
-                'Sandy (Spanish (Spain)):es-ES:local',
-                'Sandy (Spanish (Mexico)):es-MX:local',
-                'Sandy (Finnish (Finland)):fi-FI:local',
-                'Sandy (French (Canada)):fr-CA:local',
-                'Sandy (French (France)):fr-FR:local',
-                'Sandy (Italian (Italy)):it-IT:local',
-                'Sandy (Japanese (Japan)):ja-JP:local',
-                'Sandy (Korean (South Korea)):ko-KR:local',
-                'Sandy (Portuguese (Brazil)):pt-BR:local',
-                'Sandy (Chinese (China mainland)):zh-CN:local',
-                'Sandy (Chinese (Taiwan)):zh-TW:local',
-                'Sara:da-DK:local',
-                'Satu:fi-FI:local',
-                'Shelley (German (Germany)):de-DE:local',
-                'Shelley (English (United Kingdom)):en-GB:local',
-                'Shelley (English (United States)):en-US:local',
-                'Shelley (Spanish (Spain)):es-ES:local',
-                'Shelley (Spanish (Mexico)):es-MX:local',
-                'Shelley (Finnish (Finland)):fi-FI:local',
-                'Shelley (French (Canada)):fr-CA:local',
-                'Shelley (French (France)):fr-FR:local',
-                'Shelley (Italian (Italy)):it-IT:local',
-                'Shelley (Japanese (Japan)):ja-JP:local',
-                'Shelley (Korean (South Korea)):ko-KR:local',
-                'Shelley (Portuguese (Brazil)):pt-BR:local',
-                'Shelley (Chinese (China mainland)):zh-CN:local',
-                'Shelley (Chinese (Taiwan)):zh-TW:local',
-                'Sinji:zh-HK:local',
-                'Superstar:en-US:local',
-                'Tessa:en-ZA:local',
-                'Thomas:fr-FR:local',
-                'Tina:sl-SI:local',
-                'Tingting:zh-CN:local',
-                'Trinoids:en-US:local',
-                'Tünde:hu-HU:local',
-                'Vani:ta-IN:local',
-                'Whisper:en-US:local',
-                'Wobble:en-US:local',
-                'Xander:nl-NL:local',
-                'Yelda:tr-TR:local',
-                'Yu-shu:zh-CN:local',
-                'Yuna:ko-KR:local',
-                'Zarvox:en-US:local',
-                'Zosia:pl-PL:local',
-                'Zuzana:cs-CZ:local',
-                'Cecil:en-US:local',
-            ],
+            speechVoices: [],
         },
     },
     linux: {
@@ -22289,7 +22094,6 @@ const FALLBACK_FINGERPRINTS = {
         },
         brave: {
             navigatorPlatform: 'Linux x86_64',
-            navigatorOscpi: 'Linux x86_64',
             hardwareConcurrency: 9,
             screenDimensions: { width: 2560, height: 1440, colorDepth: 30 },
             devicePixelRatio: 1,
@@ -22463,7 +22267,7 @@ class StorageManager {
                 try {
                     const _window = window;
                     _window.setFingerprintingSeed(fingerprintingSeed);
-                    _window.setWebRTCIPV4(lastKnownIP || '');
+                    _window.setWebRTCIPv4(lastKnownIP || '');
                     if (timezone) {
                         _window.setTimezone(timezone);
                     }
@@ -22539,8 +22343,27 @@ class StorageManager {
  *    after navigation for edge cases the init script may miss.
  */
 async function applyFingerprint(context, values, profile) {
-    // The init script uses Camoufox-specific window.setXxx() functions.
-    // Brave handles fingerprinting entirely through the page event handler below.
+    // Brave uses a single master seed that controls all fingerprinting surfaces.
+    // Only 3 calls needed: setFingerprintingSeed, setWebRTCIPv4, setTimezone.
+    if (profile.data.browserType === 'brave') {
+        await context.addInitScript((v) => {
+            const w = window;
+            if (typeof w.setFingerprintingSeed === 'function') {
+                w.setFingerprintingSeed(v.fingerprintingSeed);
+            }
+            if (typeof w.setWebRTCIPv4 === 'function') {
+                w.setWebRTCIPv4(v.lastKnownIP || '');
+            }
+            if (typeof w.setTimezone === 'function') {
+                w.setTimezone(v.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
+            }
+        }, {
+            fingerprintingSeed: profile.data.fingerprintingSeed,
+            lastKnownIP: values.lastKnownIP,
+            timezone: values.timezone,
+        });
+    }
+    // Camoufox uses individual window.setXxx() functions for each surface.
     if (profile.data.browserType === 'camoufox') {
         await context.addInitScript((v) => {
             const w = window;
@@ -25033,11 +24856,15 @@ async function launchBrowserServers(options) {
             headless,
             executablePath,
             env,
-            firefoxUserPrefs: {
-                'webgl.force-enabled': true,
-                'webgl.disabled': false,
-                'gfx.webrender.software': true,
-            },
+            ...(browserType === 'camoufox'
+                ? {
+                    firefoxUserPrefs: {
+                        'webgl.force-enabled': true,
+                        'webgl.disabled': false,
+                        'gfx.webrender.software': true,
+                    },
+                }
+                : {}),
         });
         browserServers.push(browserServer);
         if (!quiet) {
@@ -27681,9 +27508,28 @@ function generateViewport(screen) {
  */
 function generateProfileData(fp, platform, browserType, proxyUrl) {
     const fallback = getFallbackFingerprint(platform, browserType);
+    const storageState = {
+        cookies: [],
+        origins: [],
+    };
+    // Brave only needs a seed - canvas, audio, WebGL, screen, fonts, voices
+    // are all derived from the seed internally by the browser engine.
+    if (browserType === 'brave') {
+        return {
+            browserType: 'brave',
+            fingerprintingSeed: Math.floor(Math.random() * 0xffffffff) + 1,
+            navigatorPlatform: (fp === null || fp === void 0 ? void 0 : fp.navigatorPlatform) || fallback.navigatorPlatform,
+            hardwareConcurrency: (fp === null || fp === void 0 ? void 0 : fp.hardwareConcurrency) || fallback.hardwareConcurrency,
+            storageState,
+            proxyUrl,
+        };
+    }
     const screen = fp ? fp.screenDimensions : fallback.screenDimensions;
     const speechVoices = (fp === null || fp === void 0 ? void 0 : fp.speechVoices) || fallback.speechVoices;
-    const baseData = {
+    return {
+        browserType: 'camoufox',
+        fontSpacingSeed: Math.floor(Math.random() * 0xffffffff) + 1,
+        audioFingerprintSeed: Math.floor(Math.random() * 0xffffffff) + 1,
         fingerprintId: fp === null || fp === void 0 ? void 0 : fp.fingerprintId,
         canvasSeed: Math.floor(Math.random() * 0xffffffff) + 1,
         screenDimensions: screen,
@@ -27698,16 +27544,9 @@ function generateProfileData(fp, platform, browserType, proxyUrl) {
             ? speechVoices
             : undefined,
         fontList: fp === null || fp === void 0 ? void 0 : fp.fontList,
-        storageState: {
-            cookies: [],
-            origins: [],
-        },
+        storageState,
         proxyUrl,
     };
-    if (browserType === 'brave') {
-        return Object.assign(Object.assign({}, baseData), { browserType: 'brave', fingerprintingSeed: Math.floor(Math.random() * 0xffffffff) + 1 });
-    }
-    return Object.assign(Object.assign({}, baseData), { browserType: 'camoufox', fontSpacingSeed: Math.floor(Math.random() * 0xffffffff) + 1, audioFingerprintSeed: Math.floor(Math.random() * 0xffffffff) + 1 });
 }
 class RoverfoxClient {
     constructor(wsAPIKey, managerUrl, debug = false, options) {
@@ -27921,180 +27760,166 @@ class RoverfoxClient {
             profile.data.speechVoices = undefined;
             profileUpdated = true;
         }
-        // Auto-assign fingerprint from pool if profile doesn't have one yet
-        if (!profile.data.fingerprintId) {
-            try {
-                const fp = await this.managerClient.assignFingerprint(profilePlatform);
-                profile.data.fingerprintId = fp.fingerprintId;
-                if (fp.userAgent)
-                    profile.data.userAgent = fp.userAgent;
-                profile.data.navigatorPlatform = fp.navigatorPlatform;
-                profile.data.navigatorOscpu = fp.navigatorOscpu;
-                profile.data.hardwareConcurrency = fp.hardwareConcurrency;
-                profile.data.webglVendor = fp.webglVendor;
-                profile.data.webglRenderer = fp.webglRenderer;
-                profile.data.screenDimensions = fp.screenDimensions;
-                profile.data.devicePixelRatio = fp.devicePixelRatio;
-                profile.data.fontList = fp.fontList;
-                // Validate speechVoices: must be an array with reasonable length.
-                // The DB column is TEXT[] but bad pool data can have 10k+ entries.
-                if (Array.isArray(fp.speechVoices) && fp.speechVoices.length <= 500) {
-                    profile.data.speechVoices = fp.speechVoices;
-                }
-                else if (Array.isArray(fp.speechVoices)) {
-                    if (this.debug) {
-                        console.warn(`[client] speechVoices from pool has ${fp.speechVoices.length} entries (expected <500), skipping`);
-                    }
-                    profile.data.speechVoices = undefined;
-                }
-                else {
-                    profile.data.speechVoices = undefined;
-                }
-                profileUpdated = true;
-                if (this.debug) {
-                    console.log(`[client] Assigned fingerprint ${fp.fingerprintId} to ${browserId} (platform: ${fp.navigatorPlatform})`);
-                }
-            }
-            catch (_e) {
-                if (this.debug) {
-                    console.error(`[client] Failed to assign fingerprint from pool for ${browserId}, using hardcoded fallback`);
-                }
-                // Fallback: apply a complete hardcoded fingerprint for the platform
-                const fallback = getFallbackFingerprint(profilePlatform, browserType);
-                if (!profile.data.navigatorPlatform)
-                    profile.data.navigatorPlatform = fallback.navigatorPlatform;
-                if (!profile.data.navigatorOscpu)
-                    profile.data.navigatorOscpu = fallback.navigatorOscpu;
-                if (!profile.data.hardwareConcurrency)
-                    profile.data.hardwareConcurrency = fallback.hardwareConcurrency;
-                if (!profile.data.webglVendor)
-                    profile.data.webglVendor = fallback.webglVendor;
-                if (!profile.data.webglRenderer)
-                    profile.data.webglRenderer = fallback.webglRenderer;
-                if (!profile.data.screenDimensions)
-                    profile.data.screenDimensions = fallback.screenDimensions;
-                if (!profile.data.devicePixelRatio)
-                    profile.data.devicePixelRatio = fallback.devicePixelRatio;
-                if (!profile.data.speechVoices)
-                    profile.data.speechVoices = fallback.speechVoices;
-                profileUpdated = true;
-            }
-        }
-        else {
-            // Backfill: fingerprintId exists but some fields may be missing
-            // (e.g. new fields added after initial assignment like webglVendor, speechVoices)
-            const missing = [];
-            if (!profile.data.userAgent)
-                missing.push('userAgent');
-            if (!profile.data.navigatorPlatform)
-                missing.push('navigatorPlatform');
-            if (!profile.data.navigatorOscpu)
-                missing.push('navigatorOscpu');
-            if (!profile.data.hardwareConcurrency)
-                missing.push('hardwareConcurrency');
-            if (!profile.data.webglVendor)
-                missing.push('webglVendor');
-            if (!profile.data.webglRenderer)
-                missing.push('webglRenderer');
-            if (!profile.data.screenDimensions)
-                missing.push('screenDimensions');
-            if (!profile.data.fontList || profile.data.fontList.length === 0)
-                missing.push('fontList');
-            if (!profile.data.speechVoices || profile.data.speechVoices.length === 0)
-                missing.push('speechVoices');
-            if (missing.length > 0) {
+        // Brave profiles only need a fingerprintingSeed - the browser engine derives
+        // all fingerprint surfaces from it. Skip pool assignment and Camoufox backfill.
+        if (browserType !== 'brave') {
+            // Auto-assign fingerprint from pool if profile doesn't have one yet
+            if (!profile.data.fingerprintId) {
                 try {
-                    const fp = await this.managerClient.getFingerprint(profile.data.fingerprintId);
-                    // Only fill fields that are missing — never overwrite existing data
-                    if (!profile.data.userAgent && fp.userAgent) {
+                    const fp = await this.managerClient.assignFingerprint(profilePlatform);
+                    profile.data.fingerprintId = fp.fingerprintId;
+                    if (fp.userAgent)
                         profile.data.userAgent = fp.userAgent;
-                    }
-                    if (!profile.data.navigatorPlatform && fp.navigatorPlatform) {
-                        profile.data.navigatorPlatform = fp.navigatorPlatform;
-                    }
-                    if (!profile.data.navigatorOscpu && fp.navigatorOscpu) {
-                        profile.data.navigatorOscpu = fp.navigatorOscpu;
-                    }
-                    if (!profile.data.hardwareConcurrency && fp.hardwareConcurrency) {
-                        profile.data.hardwareConcurrency = fp.hardwareConcurrency;
-                    }
-                    if (!profile.data.webglVendor && fp.webglVendor) {
-                        profile.data.webglVendor = fp.webglVendor;
-                    }
-                    if (!profile.data.webglRenderer && fp.webglRenderer) {
-                        profile.data.webglRenderer = fp.webglRenderer;
-                    }
-                    if (!profile.data.screenDimensions && fp.screenDimensions) {
-                        profile.data.screenDimensions = fp.screenDimensions;
-                    }
-                    if (!profile.data.devicePixelRatio && fp.devicePixelRatio) {
-                        profile.data.devicePixelRatio = fp.devicePixelRatio;
-                    }
-                    if ((!profile.data.fontList || profile.data.fontList.length === 0) &&
-                        fp.fontList &&
-                        fp.fontList.length > 0) {
-                        profile.data.fontList = fp.fontList;
-                    }
-                    if ((!profile.data.speechVoices ||
-                        profile.data.speechVoices.length === 0) &&
-                        Array.isArray(fp.speechVoices) &&
-                        fp.speechVoices.length > 0 &&
-                        fp.speechVoices.length <= 500) {
+                    profile.data.navigatorPlatform = fp.navigatorPlatform;
+                    profile.data.navigatorOscpu = fp.navigatorOscpu;
+                    profile.data.hardwareConcurrency = fp.hardwareConcurrency;
+                    profile.data.webglVendor = fp.webglVendor;
+                    profile.data.webglRenderer = fp.webglRenderer;
+                    profile.data.screenDimensions = fp.screenDimensions;
+                    profile.data.devicePixelRatio = fp.devicePixelRatio;
+                    profile.data.fontList = fp.fontList;
+                    if (Array.isArray(fp.speechVoices) && fp.speechVoices.length <= 500) {
                         profile.data.speechVoices = fp.speechVoices;
+                    }
+                    else {
+                        profile.data.speechVoices = undefined;
                     }
                     profileUpdated = true;
                     if (this.debug) {
-                        console.log(`[client] Backfilled ${missing.length} fields for ${browserId} from pool entry ${profile.data.fingerprintId}: ${missing.join(', ')}`);
+                        console.log(`[client] Assigned fingerprint ${fp.fingerprintId} to ${browserId} (platform: ${fp.navigatorPlatform})`);
                     }
                 }
                 catch (_e) {
                     if (this.debug) {
-                        console.error(`[client] Failed to backfill fingerprint for ${browserId} (pool entry ${profile.data.fingerprintId})`);
+                        console.error(`[client] Failed to assign fingerprint from pool for ${browserId}, using hardcoded fallback`);
+                    }
+                    const fallback = getFallbackFingerprint(profilePlatform, browserType);
+                    if (!profile.data.navigatorPlatform)
+                        profile.data.navigatorPlatform = fallback.navigatorPlatform;
+                    if (!profile.data.navigatorOscpu)
+                        profile.data.navigatorOscpu = fallback.navigatorOscpu;
+                    if (!profile.data.hardwareConcurrency)
+                        profile.data.hardwareConcurrency = fallback.hardwareConcurrency;
+                    if (!profile.data.webglVendor)
+                        profile.data.webglVendor = fallback.webglVendor;
+                    if (!profile.data.webglRenderer)
+                        profile.data.webglRenderer = fallback.webglRenderer;
+                    if (!profile.data.screenDimensions)
+                        profile.data.screenDimensions = fallback.screenDimensions;
+                    if (!profile.data.devicePixelRatio)
+                        profile.data.devicePixelRatio = fallback.devicePixelRatio;
+                    if (!profile.data.speechVoices)
+                        profile.data.speechVoices = fallback.speechVoices;
+                    profileUpdated = true;
+                }
+            }
+            else {
+                // Backfill: fingerprintId exists but some fields may be missing
+                const missing = [];
+                if (!profile.data.userAgent)
+                    missing.push('userAgent');
+                if (!profile.data.navigatorPlatform)
+                    missing.push('navigatorPlatform');
+                if (!profile.data.navigatorOscpu)
+                    missing.push('navigatorOscpu');
+                if (!profile.data.hardwareConcurrency)
+                    missing.push('hardwareConcurrency');
+                if (!profile.data.webglVendor)
+                    missing.push('webglVendor');
+                if (!profile.data.webglRenderer)
+                    missing.push('webglRenderer');
+                if (!profile.data.screenDimensions)
+                    missing.push('screenDimensions');
+                if (!profile.data.fontList || profile.data.fontList.length === 0)
+                    missing.push('fontList');
+                if (!profile.data.speechVoices ||
+                    profile.data.speechVoices.length === 0)
+                    missing.push('speechVoices');
+                if (missing.length > 0) {
+                    try {
+                        const fp = await this.managerClient.getFingerprint(profile.data.fingerprintId);
+                        if (!profile.data.userAgent && fp.userAgent) {
+                            profile.data.userAgent = fp.userAgent;
+                        }
+                        if (!profile.data.navigatorPlatform && fp.navigatorPlatform) {
+                            profile.data.navigatorPlatform = fp.navigatorPlatform;
+                        }
+                        if (!profile.data.navigatorOscpu && fp.navigatorOscpu) {
+                            profile.data.navigatorOscpu = fp.navigatorOscpu;
+                        }
+                        if (!profile.data.hardwareConcurrency && fp.hardwareConcurrency) {
+                            profile.data.hardwareConcurrency = fp.hardwareConcurrency;
+                        }
+                        if (!profile.data.webglVendor && fp.webglVendor) {
+                            profile.data.webglVendor = fp.webglVendor;
+                        }
+                        if (!profile.data.webglRenderer && fp.webglRenderer) {
+                            profile.data.webglRenderer = fp.webglRenderer;
+                        }
+                        if (!profile.data.screenDimensions && fp.screenDimensions) {
+                            profile.data.screenDimensions = fp.screenDimensions;
+                        }
+                        if (!profile.data.devicePixelRatio && fp.devicePixelRatio) {
+                            profile.data.devicePixelRatio = fp.devicePixelRatio;
+                        }
+                        if ((!profile.data.fontList || profile.data.fontList.length === 0) &&
+                            fp.fontList &&
+                            fp.fontList.length > 0) {
+                            profile.data.fontList = fp.fontList;
+                        }
+                        if ((!profile.data.speechVoices ||
+                            profile.data.speechVoices.length === 0) &&
+                            Array.isArray(fp.speechVoices) &&
+                            fp.speechVoices.length > 0 &&
+                            fp.speechVoices.length <= 500) {
+                            profile.data.speechVoices = fp.speechVoices;
+                        }
+                        profileUpdated = true;
+                        if (this.debug) {
+                            console.log(`[client] Backfilled ${missing.length} fields for ${browserId} from pool entry ${profile.data.fingerprintId}: ${missing.join(', ')}`);
+                        }
+                    }
+                    catch (_e) {
+                        if (this.debug) {
+                            console.error(`[client] Failed to backfill fingerprint for ${browserId} (pool entry ${profile.data.fingerprintId})`);
+                        }
                     }
                 }
             }
-        }
-        // Platform-aware font backfill: if fontList is still empty after pool assignment,
-        // generate a random subset from the appropriate platform's font list
-        if (!profile.data.fontList || profile.data.fontList.length === 0) {
-            const seed = profile.data.fontSpacingSeed ||
-                Math.floor(Math.random() * 0xffffffff) + 1;
-            profile.data.fontList =
-                profilePlatform === 'linux'
-                    ? generateRandomLinuxFontSubset(seed)
-                    : generateRandomFontSubset(seed);
-            profileUpdated = true;
-        }
-        // Camoufox-specific backfill
-        if (profile.data.browserType !== 'brave') {
-            // Generate random seeds (per-profile unique, not from pool).
-            // Explicitly check for 0 as well — seed=0 is treated as "not set" because
-            // the init script skips application when seed is falsy, and seed=0 would
-            // produce identical fingerprints across all profiles.
+            // Platform-aware font backfill
+            if (!profile.data.fontList || profile.data.fontList.length === 0) {
+                const seed = profile.data.fontSpacingSeed ||
+                    Math.floor(Math.random() * 0xffffffff) + 1;
+                profile.data.fontList =
+                    profilePlatform === 'linux'
+                        ? generateRandomLinuxFontSubset(seed)
+                        : generateRandomFontSubset(seed);
+                profileUpdated = true;
+            }
+            // Camoufox-specific seed generation
             if (!profile.data.audioFingerprintSeed ||
                 profile.data.audioFingerprintSeed === 0) {
                 profile.data.audioFingerprintSeed =
                     Math.floor(Math.random() * 0xffffffff) + 1;
                 profileUpdated = true;
             }
-        }
-        if (!profile.data.canvasSeed || profile.data.canvasSeed === 0) {
-            profile.data.canvasSeed = Math.floor(Math.random() * 0xffffffff) + 1;
-            profileUpdated = true;
-        }
-        if (!profile.data.fontSpacingSeed || profile.data.fontSpacingSeed === 0) {
-            profile.data.fontSpacingSeed = Math.floor(Math.random() * 0xffffffff) + 1;
-            profileUpdated = true;
-        }
-        // Viewport derived from screen dimensions.
-        // Regenerate if missing OR if viewport is wider/taller than screen (stale from
-        // a previous fingerprint assignment with different screen dims).
-        if (profile.data.screenDimensions) {
-            const vp = profile.data.viewport;
-            const sd = profile.data.screenDimensions;
-            if (!vp || vp.width > sd.width || vp.height > sd.height) {
-                profile.data.viewport = generateViewport(sd);
+            if (!profile.data.canvasSeed || profile.data.canvasSeed === 0) {
+                profile.data.canvasSeed = Math.floor(Math.random() * 0xffffffff) + 1;
                 profileUpdated = true;
+            }
+            if (!profile.data.fontSpacingSeed || profile.data.fontSpacingSeed === 0) {
+                profile.data.fontSpacingSeed =
+                    Math.floor(Math.random() * 0xffffffff) + 1;
+                profileUpdated = true;
+            }
+            // Viewport derived from screen dimensions
+            if (profile.data.screenDimensions) {
+                const vp = profile.data.viewport;
+                const sd = profile.data.screenDimensions;
+                if (!vp || vp.width > sd.width || vp.height > sd.height) {
+                    profile.data.viewport = generateViewport(sd);
+                    profileUpdated = true;
+                }
             }
         }
         if (!profile.data.devicePixelRatio) {
@@ -28211,7 +28036,6 @@ class RoverfoxClient {
      * This is a static method - no client instance required
      */
     static async launchLocalContext(proxyUrl, browserType = 'camoufox') {
-        var _a, _b, _c;
         // Check if port is in use every time
         const portInUse = await RoverfoxClient.isPortInUse(RoverfoxClient.localPort);
         if (portInUse) {
@@ -28251,8 +28075,11 @@ class RoverfoxClient {
             data: generateProfileData(null, platform, browserType, proxyUrl || null),
         };
         const viewport = profile.data.viewport;
+        const isBraveLocal = profile.data.browserType === 'brave';
         // Create browser context without streaming
-        const context = await browser.newContext(Object.assign({ bypassCSP: false, viewport, deviceScaleFactor: profile.data.devicePixelRatio || 1 }, (proxyObject
+        const context = await browser.newContext(Object.assign(Object.assign(Object.assign({ bypassCSP: false }, (!isBraveLocal ? { viewport } : {})), (!isBraveLocal
+            ? { deviceScaleFactor: profile.data.devicePixelRatio || 1 }
+            : {})), (proxyObject
             ? {
                 proxy: {
                     server: proxyObject.server,
@@ -28261,11 +28088,34 @@ class RoverfoxClient {
                 },
             }
             : {})));
-        // Apply fingerprints: init script (runs before any page scripts) + page event fallback
-        await applyFingerprint(context, Object.assign(Object.assign({}, (profile.data.browserType === 'camoufox' && {
-            fontSpacingSeed: profile.data.fontSpacingSeed,
-            audioFingerprintSeed: profile.data.audioFingerprintSeed,
-        })), { screenWidth: (_a = profile.data.screenDimensions) === null || _a === void 0 ? void 0 : _a.width, screenHeight: (_b = profile.data.screenDimensions) === null || _b === void 0 ? void 0 : _b.height, screenColorDepth: (_c = profile.data.screenDimensions) === null || _c === void 0 ? void 0 : _c.colorDepth, timezone: profile.data.timezone, navigatorPlatform: profile.data.navigatorPlatform, navigatorOscpu: profile.data.navigatorOscpu, hardwareConcurrency: profile.data.hardwareConcurrency, webglVendor: profile.data.webglVendor, webglRenderer: profile.data.webglRenderer, canvasSeed: profile.data.canvasSeed, fontList: profile.data.fontList, speechVoices: profile.data.speechVoices }), profile);
+        // Apply fingerprints: init script (runs before any page scripts) + page event fallback.
+        // Brave only needs timezone and lastKnownIP - the init script handles the rest.
+        await applyFingerprint(context, isBraveLocal
+            ? {
+                timezone: profile.data.timezone,
+                lastKnownIP: profile.data.lastKnownIP,
+            }
+            : (() => {
+                var _a, _b, _c;
+                const d = profile.data;
+                return {
+                    fontSpacingSeed: d.fontSpacingSeed,
+                    audioFingerprintSeed: d.audioFingerprintSeed,
+                    screenWidth: (_a = d.screenDimensions) === null || _a === void 0 ? void 0 : _a.width,
+                    screenHeight: (_b = d.screenDimensions) === null || _b === void 0 ? void 0 : _b.height,
+                    screenColorDepth: (_c = d.screenDimensions) === null || _c === void 0 ? void 0 : _c.colorDepth,
+                    timezone: d.timezone,
+                    lastKnownIP: d.lastKnownIP,
+                    navigatorPlatform: d.navigatorPlatform,
+                    navigatorOscpu: d.navigatorOscpu,
+                    hardwareConcurrency: d.hardwareConcurrency,
+                    webglVendor: d.webglVendor,
+                    webglRenderer: d.webglRenderer,
+                    canvasSeed: d.canvasSeed,
+                    fontList: d.fontList,
+                    speechVoices: d.speechVoices,
+                };
+            })(), profile);
         // Wrap context.close to handle cleanup
         const originalClose = context.close.bind(context);
         context.close = async (options) => {
@@ -28323,7 +28173,6 @@ class RoverfoxClient {
      * Internal method to launch instance with profile data
      */
     async launchInstance(browser, replayWs, profile, proxyObject, browserId, skipAudit = false, selectedProxyId = null, serverId, recording = false) {
-        var _a, _b, _c;
         // Strip IndexedDB from storage state to prevent restoration conflicts
         let storageStateToUse = profile.data.storageState;
         if (storageStateToUse &&
@@ -28331,18 +28180,27 @@ class RoverfoxClient {
             Array.isArray(storageStateToUse.origins)) {
             storageStateToUse = Object.assign(Object.assign({}, storageStateToUse), { origins: storageStateToUse.origins.map((origin) => (Object.assign(Object.assign({}, origin), { indexedDB: [] }))) });
         }
-        // Build per-context user agent from platform (ensures UA matches platform/oscpu)
-        const builtUA = buildUserAgentForPlatform(profile.data.navigatorPlatform);
-        const contextUserAgent = builtUA || profile.data.userAgent || undefined;
+        // Camoufox needs an explicit Firefox UA to match its engine.
+        // Brave uses its real Chromium UA - overriding it with Firefox is a detection vector.
+        const contextUserAgent = profile.data.browserType === 'brave'
+            ? undefined
+            : buildUserAgentForPlatform(profile.data.navigatorPlatform) ||
+                profile.data.userAgent ||
+                undefined;
+        // Brave's seed deterministically selects screen/viewport/DPR from 12 Mac
+        // profiles internally. Overriding from roverfox conflicts with the seed.
+        const isBrave = profile.data.browserType === 'brave';
         // Create browser context
-        const context = await browser.newContext(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, (storageStateToUse ? { storageState: storageStateToUse } : {})), { bypassCSP: false }), (contextUserAgent ? { userAgent: contextUserAgent } : {})), (profile.data.viewport ? { viewport: profile.data.viewport } : {})), (profile.data.screenDimensions
+        const context = await browser.newContext(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, (storageStateToUse ? { storageState: storageStateToUse } : {})), { bypassCSP: false }), (contextUserAgent ? { userAgent: contextUserAgent } : {})), (!isBrave && profile.data.viewport
+            ? { viewport: profile.data.viewport }
+            : {})), (!isBrave && profile.data.screenDimensions
             ? {
                 screen: {
                     width: profile.data.screenDimensions.width,
                     height: profile.data.screenDimensions.height,
                 },
             }
-            : {})), (profile.data.devicePixelRatio
+            : {})), (!isBrave && profile.data.devicePixelRatio
             ? { deviceScaleFactor: profile.data.devicePixelRatio }
             : {})), (proxyObject
             ? {
@@ -28354,13 +28212,33 @@ class RoverfoxClient {
             }
             : {})));
         // Apply fingerprints: init script (runs before any page scripts) + page event fallback.
-        // This ensures: (1) fingerprint values are set immediately, (2) custom window
-        // functions self-destruct before any page script can detect them, and (3) values
-        // persist across new tabs in the same context.
-        await applyFingerprint(context, Object.assign(Object.assign({}, (profile.data.browserType === 'camoufox' && {
-            fontSpacingSeed: profile.data.fontSpacingSeed,
-            audioFingerprintSeed: profile.data.audioFingerprintSeed,
-        })), { screenWidth: (_a = profile.data.screenDimensions) === null || _a === void 0 ? void 0 : _a.width, screenHeight: (_b = profile.data.screenDimensions) === null || _b === void 0 ? void 0 : _b.height, screenColorDepth: (_c = profile.data.screenDimensions) === null || _c === void 0 ? void 0 : _c.colorDepth, timezone: profile.data.timezone, lastKnownIP: profile.data.lastKnownIP, navigatorPlatform: profile.data.navigatorPlatform, navigatorOscpu: profile.data.navigatorOscpu, hardwareConcurrency: profile.data.hardwareConcurrency, webglVendor: profile.data.webglVendor, webglRenderer: profile.data.webglRenderer, canvasSeed: profile.data.canvasSeed, fontList: profile.data.fontList, speechVoices: profile.data.speechVoices }), profile);
+        // Brave only needs timezone and lastKnownIP - the init script handles the rest.
+        await applyFingerprint(context, isBrave
+            ? {
+                timezone: profile.data.timezone,
+                lastKnownIP: profile.data.lastKnownIP,
+            }
+            : (() => {
+                var _a, _b, _c;
+                const d = profile.data;
+                return {
+                    fontSpacingSeed: d.fontSpacingSeed,
+                    audioFingerprintSeed: d.audioFingerprintSeed,
+                    screenWidth: (_a = d.screenDimensions) === null || _a === void 0 ? void 0 : _a.width,
+                    screenHeight: (_b = d.screenDimensions) === null || _b === void 0 ? void 0 : _b.height,
+                    screenColorDepth: (_c = d.screenDimensions) === null || _c === void 0 ? void 0 : _c.colorDepth,
+                    timezone: d.timezone,
+                    lastKnownIP: d.lastKnownIP,
+                    navigatorPlatform: d.navigatorPlatform,
+                    navigatorOscpu: d.navigatorOscpu,
+                    hardwareConcurrency: d.hardwareConcurrency,
+                    webglVendor: d.webglVendor,
+                    webglRenderer: d.webglRenderer,
+                    canvasSeed: d.canvasSeed,
+                    fontList: d.fontList,
+                    speechVoices: d.speechVoices,
+                };
+            })(), profile);
         if (recording) {
             // Order matters: binding must exist before init scripts run
             await this.recordingManager.attachToContext(context, browserId, replayWs, this.connectionPool);
