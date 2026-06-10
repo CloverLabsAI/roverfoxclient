@@ -26736,7 +26736,7 @@ class ManagerClient {
      * Manager handles the DB lookup, health check, and reservation.
      */
     async selectProxy(params) {
-        var _a, _b, _c;
+        var _a, _b, _c, _d, _e;
         try {
             const { data } = await this.manager.post('/api/proxies/select', params);
             // Normalize: pool-based returns { proxyId, proxyUrl, exitIp, geoState },
@@ -26746,9 +26746,11 @@ class ManagerClient {
             }
             return {
                 proxyId: (_a = data.proxyId) !== null && _a !== void 0 ? _a : 0,
+                leaseId: (_b = data.leaseId) !== null && _b !== void 0 ? _b : null,
+                expiresAt: (_c = data.expiresAt) !== null && _c !== void 0 ? _c : null,
                 proxyUrl: data.proxyUrl,
-                exitIp: (_b = data.exitIp) !== null && _b !== void 0 ? _b : null,
-                geoState: (_c = data.geoState) !== null && _c !== void 0 ? _c : null,
+                exitIp: (_d = data.exitIp) !== null && _d !== void 0 ? _d : null,
+                geoState: (_e = data.geoState) !== null && _e !== void 0 ? _e : null,
             };
         }
         catch (error) {
@@ -26760,10 +26762,11 @@ class ManagerClient {
     /**
      * Releases a proxy back to the pool after session ends.
      */
-    async releaseProxy(proxyId, rotate = true, browserId) {
+    async releaseProxy(proxyId, rotate = true, browserId, leaseId) {
+        if (!proxyId && !leaseId)
+            return;
         try {
-            await this.manager.post('/api/proxies/release', Object.assign({ proxyId,
-                rotate }, (browserId ? { browserId } : {})));
+            await this.manager.post('/api/proxies/release', Object.assign(Object.assign(Object.assign(Object.assign({}, (proxyId ? { proxyId } : {})), (leaseId ? { leaseId } : {})), { rotate }), (browserId ? { browserId } : {})));
         }
         catch (error) {
             if (this.debug)
@@ -26893,7 +26896,7 @@ class ManagerClient {
     /**
      * Logs data usage via manager
      */
-    async logUsage(browserId, start, end, bytes, isOneTime = false, serverId) {
+    async logUsage(browserId, start, end, bytes, isOneTime = false, serverId, leaseId) {
         try {
             await this.manager.post('/api/usage', {
                 browserId,
@@ -26902,6 +26905,7 @@ class ManagerClient {
                 bytes,
                 isOneTime,
                 serverId,
+                leaseId,
             });
         }
         catch (error) {
@@ -27479,6 +27483,10 @@ function formatProxyURL(proxyUrl) {
  */
 const requireFromHere = createRequire(import.meta.url);
 const RRWEB_BUNDLE_PATH = requireFromHere.resolve('rrweb/dist/rrweb.min.js');
+function proxyServerFromUrl(proxyUrl) {
+    const port = proxyUrl.port || (proxyUrl.protocol === 'https:' ? '443' : '80');
+    return `${proxyUrl.hostname}:${port}`;
+}
 // Build a Firefox UA string matching the given navigator.platform.
 // Uses Camoufox's Firefox version (146.0) regardless of what the pool collected.
 const FIREFOX_VERSION = '146.0';
@@ -27620,6 +27628,7 @@ class RoverfoxClient {
         // Proxy selection: use explicit override, dynamic geo-matched, or static fallback
         let proxyObject = staticProxyObject;
         let selectedProxyId = null;
+        let selectedProxyLeaseId = null;
         if (options === null || options === void 0 ? void 0 : options.proxyUrl) {
             // Explicit proxy override — skip dynamic selection entirely
             let proxyUrlObj;
@@ -27630,12 +27639,12 @@ class RoverfoxClient {
                 throw new Error(`Invalid proxyUrl provided: ${options.proxyUrl}`);
             }
             proxyObject = {
-                server: `${proxyUrlObj.hostname}:${proxyUrlObj.port}`,
+                server: proxyServerFromUrl(proxyUrlObj),
                 username: decodeURIComponent(proxyUrlObj.username),
                 password: decodeURIComponent(proxyUrlObj.password),
             };
             if (this.debug) {
-                console.log(`[client] Using explicit proxy override for ${browserId}: ${proxyUrlObj.hostname}:${proxyUrlObj.port}`);
+                console.log(`[client] Using explicit proxy override for ${browserId}: ${proxyServerFromUrl(proxyUrlObj)}`);
             }
         }
         else if (profile.geo_state) {
@@ -27650,17 +27659,18 @@ class RoverfoxClient {
                 // Override the static proxy with the dynamically selected one
                 const proxyUrl = new URL(selected.proxyUrl);
                 proxyObject = {
-                    server: `${proxyUrl.hostname}:${proxyUrl.port}`,
+                    server: proxyServerFromUrl(proxyUrl),
                     username: decodeURIComponent(proxyUrl.username),
                     password: decodeURIComponent(proxyUrl.password),
                 };
                 selectedProxyId = selected.proxyId;
+                selectedProxyLeaseId = selected.leaseId;
                 // Use exit IP from health check for geo/WebRTC
                 if (selected.exitIp) {
                     profile.data.lastKnownIP = selected.exitIp;
                 }
                 if (this.debug) {
-                    console.log(`[client] Dynamic proxy selected for ${browserId}: proxyId=${selected.proxyId}, state=${selected.geoState}, IP=${selected.exitIp}`);
+                    console.log(`[client] Dynamic proxy selected for ${browserId}: proxyId=${selected.proxyId}, leaseId=${selected.leaseId}, state=${selected.geoState}, IP=${selected.exitIp}`);
                 }
             }
             catch (e) {
@@ -27942,7 +27952,7 @@ class RoverfoxClient {
         // Create browser context with profile data
         return this.launchInstance(browser, replayWs, profile, proxyObject, browserId, false, // skipAudit
         selectedProxyId, // dynamic proxy to release on close
-        serverId, (_a = options === null || options === void 0 ? void 0 : options.recording) !== null && _a !== void 0 ? _a : false);
+        selectedProxyLeaseId, serverId, (_a = options === null || options === void 0 ? void 0 : options.recording) !== null && _a !== void 0 ? _a : false);
     }
     /**
      * Launch a one-time browser without profile
@@ -27983,7 +27993,7 @@ class RoverfoxClient {
             browser_id: browserId,
             data: profileData,
         }, proxyObject, browserId, true, // skipAudit
-        null, assignment.serverId, false);
+        null, null, assignment.serverId, false);
         // Close as one time context
         const closeContext = context.close.bind(context);
         context.close = (options) => closeContext(Object.assign(Object.assign({}, options), { isOneTime: true }));
@@ -28172,7 +28182,7 @@ class RoverfoxClient {
     /**
      * Internal method to launch instance with profile data
      */
-    async launchInstance(browser, replayWs, profile, proxyObject, browserId, skipAudit = false, selectedProxyId = null, serverId, recording = false) {
+    async launchInstance(browser, replayWs, profile, proxyObject, browserId, skipAudit = false, selectedProxyId = null, selectedProxyLeaseId = null, serverId, recording = false) {
         // Strip IndexedDB from storage state to prevent restoration conflicts
         let storageStateToUse = profile.data.storageState;
         if (storageStateToUse &&
@@ -28290,9 +28300,9 @@ class RoverfoxClient {
             if (!skipAudit)
                 await this.managerClient.logAudit(browserId, 'closeContext', {});
             // Release dynamically selected proxy back to the pool (with 5s timeout to avoid hanging if manager is unreachable)
-            if (selectedProxyId) {
+            if (selectedProxyId || selectedProxyLeaseId) {
                 await Promise.race([
-                    this.managerClient.releaseProxy(selectedProxyId, true, browserId),
+                    this.managerClient.releaseProxy(selectedProxyId, true, browserId, selectedProxyLeaseId),
                     new Promise((resolve) => setTimeout(resolve, 5000)),
                 ]).catch(() => { });
             }
@@ -28300,7 +28310,7 @@ class RoverfoxClient {
             const tracker = this.dataUsageTrackers.get(browserId);
             if (tracker) {
                 const usageData = tracker.getUsageData();
-                await this.managerClient.logUsage(usageData.browserId, usageData.timeStart, usageData.timeEnd, usageData.bytes, (_a = options === null || options === void 0 ? void 0 : options.isOneTime) !== null && _a !== void 0 ? _a : false, serverId);
+                await this.managerClient.logUsage(usageData.browserId, usageData.timeStart, usageData.timeEnd, usageData.bytes, (_a = options === null || options === void 0 ? void 0 : options.isOneTime) !== null && _a !== void 0 ? _a : false, serverId, selectedProxyLeaseId);
                 // Clean up tracker
                 this.dataUsageTrackers.delete(browserId);
             }

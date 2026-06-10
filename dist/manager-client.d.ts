@@ -64,6 +64,8 @@ export declare class ManagerClient {
         service?: string;
     }): Promise<{
         proxyId: number;
+        leaseId: string | null;
+        expiresAt: string | null;
         proxyUrl: string;
         exitIp: string | null;
         geoState: string | null;
@@ -71,7 +73,7 @@ export declare class ManagerClient {
     /**
      * Releases a proxy back to the pool after session ends.
      */
-    releaseProxy(proxyId: number, rotate?: boolean, browserId?: string): Promise<void>;
+    releaseProxy(proxyId: number | null | undefined, rotate?: boolean, browserId?: string, leaseId?: string | null): Promise<void>;
     /**
      * Assigns a geo state to a profile proportionally based on proxy availability.
      */
@@ -114,5 +116,5 @@ export declare class ManagerClient {
     /**
      * Logs data usage via manager
      */
-    logUsage(browserId: string, start: string, end: string, bytes: number, isOneTime?: boolean, serverId?: string): Promise<void>;
+    logUsage(browserId: string, start: string, end: string, bytes: number, isOneTime?: boolean, serverId?: string, leaseId?: string | null): Promise<void>;
 }
