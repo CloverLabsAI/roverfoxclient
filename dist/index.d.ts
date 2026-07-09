@@ -3,10 +3,37 @@
  * Connects to distributed Roverfox servers via manager
  */
 import type { BrowserContext } from 'playwright';
+import { type ManagerProxySelection } from './manager-client.js';
 import type { BrowserType, NewProfileOptions } from './types.js';
 import type { RoverFoxProfileData } from './types/client.js';
 export interface RoverfoxCloseOptions {
     isOneTime?: boolean;
+}
+export interface RoverfoxProxySelectionOptions {
+    allowNeighborFallback?: boolean;
+    browserId?: string;
+    geoState?: string;
+    latitude?: number;
+    longitude?: number;
+    maxDistanceKm?: number;
+    requireExactState?: boolean;
+    sessionLengthSeconds?: number;
+    timeoutMs?: number;
+}
+export interface RoverfoxProxySelection extends ManagerProxySelection {
+    service: string;
+    browserId?: string;
+}
+export interface RoverfoxProxyReleaseSelection {
+    browserId?: string;
+    proxyId?: number | null;
+    leaseId?: string | null;
+}
+export interface RoverfoxProxyReleaseOptions {
+    rotate?: boolean;
+    browserId?: string;
+    timeoutMs?: number;
+    throwOnError?: boolean;
 }
 export interface RoverfoxBrowserContext extends BrowserContext {
     close(options?: Parameters<BrowserContext['close']>[0] & RoverfoxCloseOptions): Promise<void>;
@@ -27,6 +54,8 @@ export declare class RoverfoxClient {
     constructor(wsAPIKey: string, managerUrl?: string, debug?: boolean, options?: {
         workerWsUrl?: string;
     });
+    selectProxyByService(service: string, options?: RoverfoxProxySelectionOptions | string): Promise<RoverfoxProxySelection>;
+    releaseProxySelection(selection: RoverfoxProxyReleaseSelection | null | undefined, options?: RoverfoxProxyReleaseOptions | boolean): Promise<boolean>;
     /**
      * Launch a browser profile - gets server assignment from manager.
      * Optionally pass a proxyUrl to override dynamic proxy selection.

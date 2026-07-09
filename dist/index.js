@@ -24,6 +24,40 @@ import WebSocket, { WebSocketServer } from 'ws';
 import require$$0$2 from 'buffer';
 import { randomUUID as randomUUID$1 } from 'node:crypto';
 
+/******************************************************************************
+Copyright (c) Microsoft Corporation.
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+***************************************************************************** */
+/* global Reflect, Promise, SuppressedError, Symbol, Iterator */
+
+
+function __rest(s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+}
+
+typeof SuppressedError === "function" ? SuppressedError : function (error, suppressed, message) {
+    var e = new Error(message);
+    return e.name = "SuppressedError", e.error = error, e.suppressed = suppressed, e;
+};
+
 /**
  * Create a bound version of a function with a specified `this` context
  *
@@ -14868,12 +14902,12 @@ const hasStandardBrowserWebWorkerEnv = (() => {
 const origin = (hasBrowserEnv && window.location.href) || 'http://localhost';
 
 var utils = /*#__PURE__*/Object.freeze({
-  __proto__: null,
-  hasBrowserEnv: hasBrowserEnv,
-  hasStandardBrowserEnv: hasStandardBrowserEnv,
-  hasStandardBrowserWebWorkerEnv: hasStandardBrowserWebWorkerEnv,
-  navigator: _navigator,
-  origin: origin
+    __proto__: null,
+    hasBrowserEnv: hasBrowserEnv,
+    hasStandardBrowserEnv: hasStandardBrowserEnv,
+    hasStandardBrowserWebWorkerEnv: hasStandardBrowserWebWorkerEnv,
+    navigator: _navigator,
+    origin: origin
 });
 
 var platform = {
@@ -26735,23 +26769,21 @@ class ManagerClient {
      * Selects a geo-matched proxy for a browser profile.
      * Manager handles the DB lookup, health check, and reservation.
      */
-    async selectProxy(params) {
-        var _a, _b, _c, _d, _e;
+    async selectProxy(params, options = {}) {
+        var _a, _b, _c, _d, _e, _f, _g, _h;
         try {
-            const { data } = await this.manager.post('/api/proxies/select', params);
-            // Normalize: pool-based returns { proxyId, proxyUrl, exitIp, geoState },
-            // service-based returns ProxyCredentials { proxyUrl, proxyId?, geoState?, ... }
-            if (!data.proxyUrl) {
+            const { data } = await this.manager.post('/api/proxies/select', params, options.timeoutMs ? { timeout: options.timeoutMs } : undefined);
+            // Normalize the two flat response shapes: pool-based { proxyId, proxyUrl, exitIp, geoState }
+            // and service-based ProxyCredentials { proxyUrl, proxyId?, geoState?, ... }.
+            const proxyUrl = data.proxyUrl;
+            if (!proxyUrl) {
                 throw new Error(data.error || 'No proxyUrl in Manager response');
             }
-            return {
-                proxyId: (_a = data.proxyId) !== null && _a !== void 0 ? _a : 0,
-                leaseId: (_b = data.leaseId) !== null && _b !== void 0 ? _b : null,
-                expiresAt: (_c = data.expiresAt) !== null && _c !== void 0 ? _c : null,
-                proxyUrl: data.proxyUrl,
-                exitIp: (_d = data.exitIp) !== null && _d !== void 0 ? _d : null,
-                geoState: (_e = data.geoState) !== null && _e !== void 0 ? _e : null,
-            };
+            return Object.assign(Object.assign(Object.assign(Object.assign({ proxyId: (_a = data.proxyId) !== null && _a !== void 0 ? _a : null, leaseId: (_b = data.leaseId) !== null && _b !== void 0 ? _b : null, expiresAt: (_c = data.expiresAt) !== null && _c !== void 0 ? _c : null, proxyUrl, exitIp: (_d = data.exitIp) !== null && _d !== void 0 ? _d : null, geoState: (_e = data.geoState) !== null && _e !== void 0 ? _e : null }, (data.latitude !== undefined
+                ? { latitude: (_f = data.latitude) !== null && _f !== void 0 ? _f : null }
+                : {})), (data.longitude !== undefined
+                ? { longitude: (_g = data.longitude) !== null && _g !== void 0 ? _g : null }
+                : {})), (data.provider ? { provider: data.provider } : {})), (data.plan !== undefined ? { plan: (_h = data.plan) !== null && _h !== void 0 ? _h : null } : {}));
         }
         catch (error) {
             if (this.debug)
@@ -26762,16 +26794,19 @@ class ManagerClient {
     /**
      * Releases a proxy back to the pool after session ends.
      */
-    async releaseProxy(proxyId, rotate = true, browserId, leaseId) {
+    async releaseProxy(proxyId, rotate = true, browserId, leaseId, options = {}) {
         if (!proxyId && !leaseId)
-            return;
+            return false;
         try {
-            await this.manager.post('/api/proxies/release', Object.assign(Object.assign(Object.assign(Object.assign({}, (proxyId ? { proxyId } : {})), (leaseId ? { leaseId } : {})), { rotate }), (browserId ? { browserId } : {})));
+            await this.manager.post('/api/proxies/release', Object.assign(Object.assign(Object.assign(Object.assign({}, (proxyId ? { proxyId } : {})), (leaseId ? { leaseId } : {})), { rotate }), (browserId ? { browserId } : {})), options.timeoutMs ? { timeout: options.timeoutMs } : undefined);
+            return true;
         }
         catch (error) {
             if (this.debug)
                 console.error('[client] Failed to release proxy:', error);
-            // Non-critical: don't throw — stale cleanup will handle it
+            if (options.throwOnError)
+                throw error;
+            return false;
         }
     }
     /**
@@ -27483,6 +27518,8 @@ function formatProxyURL(proxyUrl) {
  */
 const requireFromHere = createRequire(import.meta.url);
 const RRWEB_BUNDLE_PATH = requireFromHere.resolve('rrweb/dist/rrweb.min.js');
+const DEFAULT_PROXY_MANAGER_TIMEOUT_MS = 10000;
+const PROXY_RELEASE_CLOSE_TIMEOUT_MS = 5000;
 function proxyServerFromUrl(proxyUrl) {
     const port = proxyUrl.port || (proxyUrl.protocol === 'https:' ? '443' : '80');
     return `${proxyUrl.hostname}:${port}`;
@@ -27556,6 +27593,16 @@ function generateProfileData(fp, platform, browserType, proxyUrl) {
         proxyUrl,
     };
 }
+function normalizeProxySelectionOptions(options) {
+    if (typeof options === 'string')
+        return { geoState: options };
+    return options !== null && options !== void 0 ? options : {};
+}
+function normalizeProxyReleaseOptions(options) {
+    if (typeof options === 'boolean')
+        return { rotate: options };
+    return options !== null && options !== void 0 ? options : {};
+}
 class RoverfoxClient {
     constructor(wsAPIKey, managerUrl, debug = false, options) {
         this.recordingManager = new RecordingManager();
@@ -27572,6 +27619,24 @@ class RoverfoxClient {
         // Set up streaming message handler
         this.connectionPool.setStreamingMessageHandler((message) => {
             this.replayManager.handleStreamingControlMessage(message);
+        });
+    }
+    async selectProxyByService(service, options) {
+        const normalizedOptions = normalizeProxySelectionOptions(options);
+        const { timeoutMs = DEFAULT_PROXY_MANAGER_TIMEOUT_MS } = normalizedOptions, selectOptions = __rest(normalizedOptions, ["timeoutMs"]);
+        const selected = await this.managerClient.selectProxy(Object.assign(Object.assign({}, selectOptions), { service }), { timeoutMs });
+        return Object.assign(Object.assign(Object.assign({}, selected), { service }), (normalizedOptions.browserId
+            ? { browserId: normalizedOptions.browserId }
+            : {}));
+    }
+    async releaseProxySelection(selection, options) {
+        var _a, _b, _c, _d;
+        if (!(selection === null || selection === void 0 ? void 0 : selection.proxyId) && !(selection === null || selection === void 0 ? void 0 : selection.leaseId))
+            return false;
+        const normalizedOptions = normalizeProxyReleaseOptions(options);
+        return this.managerClient.releaseProxy(selection.proxyId, (_a = normalizedOptions.rotate) !== null && _a !== void 0 ? _a : true, (_b = normalizedOptions.browserId) !== null && _b !== void 0 ? _b : selection.browserId, selection.leaseId, {
+            timeoutMs: (_c = normalizedOptions.timeoutMs) !== null && _c !== void 0 ? _c : DEFAULT_PROXY_MANAGER_TIMEOUT_MS,
+            throwOnError: (_d = normalizedOptions.throwOnError) !== null && _d !== void 0 ? _d : false,
         });
     }
     /**
@@ -27655,7 +27720,7 @@ class RoverfoxClient {
                     latitude: profile.geo_latitude,
                     longitude: profile.geo_longitude,
                     service: options === null || options === void 0 ? void 0 : options.service,
-                });
+                }, { timeoutMs: DEFAULT_PROXY_MANAGER_TIMEOUT_MS });
                 // Override the static proxy with the dynamically selected one
                 const proxyUrl = new URL(selected.proxyUrl);
                 proxyObject = {
@@ -28302,8 +28367,8 @@ class RoverfoxClient {
             // Release dynamically selected proxy back to the pool (with 5s timeout to avoid hanging if manager is unreachable)
             if (selectedProxyId || selectedProxyLeaseId) {
                 await Promise.race([
-                    this.managerClient.releaseProxy(selectedProxyId, true, browserId, selectedProxyLeaseId),
-                    new Promise((resolve) => setTimeout(resolve, 5000)),
+                    this.releaseProxySelection({ proxyId: selectedProxyId, leaseId: selectedProxyLeaseId }, { browserId }),
+                    new Promise((resolve) => setTimeout(resolve, PROXY_RELEASE_CLOSE_TIMEOUT_MS)),
                 ]).catch(() => { });
             }
             // Report data usage to manager

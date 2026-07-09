@@ -2,6 +2,35 @@
  * Client for communicating with Roverfox Manager
  */
 import type { BrowserType, Platform, ServerAssignment, ServerAssignmentOptions } from './types.js';
+export interface ManagerProxySelectParams {
+    allowNeighborFallback?: boolean;
+    browserId?: string;
+    geoState?: string;
+    latitude?: number;
+    longitude?: number;
+    maxDistanceKm?: number;
+    requireExactState?: boolean;
+    sessionLengthSeconds?: number;
+    service?: string;
+}
+export interface ManagerRequestOptions {
+    timeoutMs?: number;
+}
+export interface ManagerProxySelection {
+    proxyId: number | null;
+    leaseId: string | null;
+    expiresAt: string | null;
+    proxyUrl: string;
+    exitIp: string | null;
+    geoState: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    provider?: string;
+    plan?: string | null;
+}
+export interface ManagerProxyReleaseOptions extends ManagerRequestOptions {
+    throwOnError?: boolean;
+}
 export declare class ManagerClient {
     private manager;
     private debug;
@@ -56,24 +85,11 @@ export declare class ManagerClient {
      * Selects a geo-matched proxy for a browser profile.
      * Manager handles the DB lookup, health check, and reservation.
      */
-    selectProxy(params: {
-        browserId?: string;
-        geoState?: string;
-        latitude?: number;
-        longitude?: number;
-        service?: string;
-    }): Promise<{
-        proxyId: number;
-        leaseId: string | null;
-        expiresAt: string | null;
-        proxyUrl: string;
-        exitIp: string | null;
-        geoState: string | null;
-    }>;
+    selectProxy(params: ManagerProxySelectParams, options?: ManagerRequestOptions): Promise<ManagerProxySelection>;
     /**
      * Releases a proxy back to the pool after session ends.
      */
-    releaseProxy(proxyId: number | null | undefined, rotate?: boolean, browserId?: string, leaseId?: string | null): Promise<void>;
+    releaseProxy(proxyId: number | null | undefined, rotate?: boolean, browserId?: string, leaseId?: string | null, options?: ManagerProxyReleaseOptions): Promise<boolean>;
     /**
      * Assigns a geo state to a profile proportionally based on proxy availability.
      */
